@@ -1,0 +1,48 @@
+# 뉴스 출처 신뢰도 4단계 정책 (V2).
+# 핵심: ALLOW ≠ 매수허용. ALLOW는 '분석 반영 가능'일 뿐,
+# 최종 매수는 시장반응·리스크 필터를 추가로 통과해야 한다.
+
+source_policy:
+  ALLOW:        # 공식·1급 매체 — 점수 반영 가능
+    - sec.gov
+    - nasdaq.com
+    - nyse.com
+    - finra.org
+    - fda.gov
+    - reuters.com
+    - bloomberg.com
+    - wsj.com
+    - apnews.com
+    - cnbc.com
+    - marketwatch.com
+    - barrons.com
+    - ft.com
+    - businesswire.com
+    - prnewswire.com
+    - globenewswire.com
+
+  GRAY:         # 2급 — 단독 매수 금지, 교차확인 시 감점 반영
+    - benzinga.com
+    - seekingalpha.com
+    - fool.com
+    - investorplace.com
+    - zacks.com
+    - thestreet.com
+    - tipranks.com
+
+  WATCH_ONLY:   # 소셜 — 조기 감지 전용, 자동매수 금지
+    - x.com
+    - twitter.com
+    - reddit.com
+    - stocktwits.com
+    - youtube.com
+    - telegram.org
+    - discord.com
+    - substack.com
+
+# 본문/메타에서 아래 조건이면 BLOCK (분석 제외)
+block_conditions:
+  - sponsored_content
+  - paid_stock_promotion
+  - guaranteed_profit_claim
+  - missing_original_source

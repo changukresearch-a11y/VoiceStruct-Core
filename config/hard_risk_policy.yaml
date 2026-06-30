@@ -1,0 +1,53 @@
+# 하드리스크 룰 (V4) — LLM 판단보다 먼저 적용되는 자동매매 안전장치.
+# 본문에서 키워드가 감지되면 LLM 분석 결과와 무관하게 trade_permission을 강제하고
+# buy_score=0, risk_score를 최소값으로 보정한다.
+# 보유 중이면 RISK_REDUCE 후보로 표시.
+
+hard_risk_events:
+  delisting:
+    keywords:
+      - "delisting notice"
+      - "notice of delisting"
+      - "non-compliance with listing rules"
+    trade_permission: BLOCK_BUY
+    risk_score_min: 9.0
+
+  trading_halt:
+    keywords:
+      - "trading halt"
+      - "trading suspension"
+    trade_permission: BLOCK_ALL
+    risk_score_min: 10.0
+
+  bankruptcy:
+    keywords:
+      - "bankruptcy"
+      - "chapter 11"
+      - "going concern"
+    trade_permission: BLOCK_BUY
+    risk_score_min: 9.5
+
+  accounting_issue:
+    keywords:
+      - "financial restatement"
+      - "accounting irregularity"
+      - "material weakness"
+    trade_permission: BLOCK_BUY
+    risk_score_min: 8.5
+
+  auditor_change:
+    keywords:
+      - "resignation of independent registered public accounting firm"
+      - "change in accountant"
+      - "dismissal of auditor"
+    trade_permission: BLOCK_BUY
+    risk_score_min: 8.0
+
+  dilution:
+    keywords:
+      - "secondary offering"
+      - "share dilution"
+      - "convertible notes"
+      - "at-the-market offering"
+    trade_permission: BLOCK_BUY
+    risk_score_min: 8.0

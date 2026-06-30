@@ -1,0 +1,42 @@
+# 입력단 키워드 필터 (V1) — LLM 호출 전에 코드로 노이즈를 거른다.
+# 화이트리스트가 블랙리스트보다 우선한다(좋은 8-K가 'investigation'을 포함해도
+# 화이트 키워드가 있으면 통과 — false negative 방지).
+
+# 블랙리스트: 매치 시 LLM에 보내지 않고 drop (또는 감점)
+blacklist:
+  legal_ad_noise:        # 법률 광고(주주모집) — 호재/악재 아님
+    - "class action"
+    - "investor alert"
+    - "law firm reminds investors"
+    - "shareholder alert"
+    - "deadline"
+  speculation:           # 추측성 — 확정 아님
+    - "reportedly"
+    - "sources say"
+    - "people familiar with"
+    - "rumor"
+  clickbait:             # 사후 해설·낚시
+    - "why shares are"
+    - "time to buy"
+    - "stocks to watch"
+    - "best stocks to buy"
+    - "top picks"
+
+# 화이트리스트: 매치 시 우선 처리(블랙보다 우선) — 신뢰도 높은 이벤트
+whitelist:
+  shareholder_return:
+    - "share buyback"
+    - "repurchase"
+    - "special dividend"
+    - "guidance raised"
+  ma:
+    - "acquisition"
+    - "buyout"
+    - "merger"
+    - "strategic partnership"
+    - "spin-off"
+  approval_milestone:
+    - "fda approval"
+    - "fda cleared"
+    - "clinical trial success"
+    - "patent granted"
