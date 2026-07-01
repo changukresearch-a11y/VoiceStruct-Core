@@ -59,6 +59,24 @@ def run_disclosure_pipeline(ticker: str, form_type: str = "8-K",
         item, metrics = fetch_latest_financials(ticker)   # XBRL은 항상 실호출
         result = DisclosureResult(item=item, route=route, metrics=metrics)
         result.notes.append(f"XBRL 경로: {metrics.summary_line()}")
+        # 10-Q/K 본문 리스크문구 스캔 (수치 경로는 본문을 안 받으므로 별도 수집).
+        # going concern·material weakness 등은 수치로 안 잡혀 → 원문에서 하드룰 검사.
+        if not use_sample:
+            try:
+                from app.collectors.sec_collector import fetch_report_text
+                text, rmeta = fetch_report_text(ticker, item.meta["form_type"])
+                if rmeta:
+                    item.meta.setdefault("accession_no", rmeta.get("accession_no"))
+                    if rmeta.get("filed_at"):
+                        item.meta["filed_at"] = rmeta["filed_at"]  # 제출일 더 정확
+                if text:
+                    result.hard_risk = check_hard_risk(text)
+                    if result.hard_risk:
+                        result.notes.append(
+                            f"10-Q/K 본문 리스크문구: {result.hard_risk.risk_type}"
+                            f"({result.hard_risk.matched_keyword})")
+            except Exception as e:
+                result.notes.append(f"10-Q/K 본문 리스크 스캔 실패(무시): {type(e).__name__}")
     else:
         item = fetch_latest_8k(ticker, use_sample=use_sample)
         result = DisclosureResult(item=item, route=route)
@@ -70,8 +88,9 @@ def run_disclosure_pipeline(ticker: str, form_type: str = "8-K",
         if item_no:
             result.routed_item = route_item(item_no)
 
-    # 3) 하드룰 (LLM보다 우선)
-    result.hard_risk = check_hard_risk(item.body)
+    # 3) 하드룰 (LLM보다 우선). XBRL 분기에서 본문 스캔으로 이미 잡았으면 유지.
+    if result.hard_risk is None:
+        result.hard_risk = check_hard_risk(item.body)
     if result.hard_risk:
         result.notes.append(
             f"하드리스크 감지: {result.hard_risk.risk_type} "

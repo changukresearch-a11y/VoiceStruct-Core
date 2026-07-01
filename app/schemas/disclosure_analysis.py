@@ -16,18 +16,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-# MVP 이벤트 온톨로지 — 8종으로 시작. (Phase2에서 세분화)
-DisclosureEventType = Literal[
-    "earnings",            # 실적 발표 (10-Q/10-K, 8-K Item 2.02)
-    "guidance_change",     # 가이던스 상/하향
-    "ma",                  # M&A (인수/합병/피인수)
-    "management_change",   # 임원·이사 변경 (CEO/CFO 사임 등)
-    "capital_raise",       # 증자·신주·전환사채 (희석)
-    "delisting_halt",      # 상장폐지·거래정지 (하드리스크)
-    "material_agreement",  # 대형 계약 체결/종료
-    "insider_trade",       # 내부자 거래 (Form 4, 코드 스코어링)
-    "other",               # 그 외
-]
+from app.common.ontology import EventType
+
+# 공시/뉴스 공유 통일 온톨로지 사용 (app/common/ontology.py, 명세 §10).
+DisclosureEventType = EventType   # 하위호환 별칭
 
 Sentiment = Literal["positive", "negative", "neutral", "mixed"]
 

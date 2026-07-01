@@ -35,3 +35,22 @@ def load_seed() -> tuple[int, int]:
         upsert_company(t, f"{int(row['cik_str']):010d}", row.get("title", t))
         loaded += 1
     return loaded, skipped
+
+
+def load_sec_universe(limit: int | None = None) -> int:
+    """SEC company_tickers.json의 전체(또는 limit) 후보를 companies에 적재.
+
+    2000개 확장의 후보 풀. 시총은 비운 채 넣고, 이후 enrich→reprioritize로
+    상위 N만 active 유지한다. 반환: 적재(upsert) 건수.
+    """
+    from app.collectors.sec_collector import _ticker_map
+    from app.universe.repository import upsert_company
+
+    tmap = _ticker_map()
+    n = 0
+    for t, row in tmap.items():
+        if limit is not None and n >= limit:
+            break
+        upsert_company(t, f"{int(row['cik_str']):010d}", row.get("title", t))
+        n += 1
+    return n

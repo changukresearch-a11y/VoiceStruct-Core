@@ -61,10 +61,33 @@ python run_skeleton.py --ticker AAPL --form 8-K  --live --llm --save
 python run_skeleton.py --ticker AAPL --form 10-Q --live --llm --save
 ```
 
-## 다음 단계
+## 이후 완료된 것 (상세는 WORKLOG.md)
 
-1. Form 4 XML 파서 (내부자 거래, 100% 코드 — LLM 배제)
-2. 뉴스 어댑터 (common 레이어 재사용, 출처 4단계 + 키워드 필터)
-3. 시장반응 검증 (가격·거래량) → 매수 권한 실제 부여 (Phase 2)
-4. 10-Q/K 본문 리스크 문구 파싱 (going concern 등, Phase 2)
-```
+- ✅ Form 4 XML 파서 (내부자 거래, 100% 코드)
+- ✅ 뉴스 어댑터 (RSS 실수집 + 출처 4단계 + 키워드 필터)
+- ✅ 유니버스 배치 (`run_universe.py`, companies 50개 + 증분)
+- ✅ **수집 스케줄러** (`run_scheduler.py`) — 주기 순회 + 메타레벨 증분(문서 다운로드 전 skip) + 뉴스 통합
+  ```bash
+  python run_scheduler.py --once --limit 3 --forms 8-K,4 --save
+  python run_scheduler.py --interval 900 --limit 10 --forms 8-K,10-Q --news --llm --save
+  ```
+- ✅ **뉴스 DB 저장** (`news_signals` 테이블) — google_link 키로 DB 기반 dedup (재시작에도 유지)
+- ✅ **유니버스 시총 확장** — Yahoo 배치(키 불필요)로 `market_cap` 채워 `priority`=시총순위, 상위 K만 active
+  ```bash
+  python run_universe.py --expand 0 --enrich --reprioritize --keep-top 2000
+  ```
+- ✅ **백테스트 피드백** — Yahoo chart로 +1/3/5거래일 수익률 채우고 이벤트/출처별 성과 리포트 (가중치 자동조정은 안 함)
+  ```bash
+  python run_backtest.py --fill --report
+  ```
+
+- ✅ **Phase 2**: 공시 `filed_at` 저장(백테스트 day0 정확도) · **10-Q/K 본문 리스크문구 스캔**(going concern 등 → BLOCK_BUY)
+
+> 📌 MVP 정보분석 파트(공시·뉴스·유니버스·스케줄러·저장·백테스트) **한 바퀴 완성** + Phase 2 정교화 착수.
+
+## 남은 단계 (Phase 2 나머지, WORKLOG.md 6절 참고)
+
+- XBRL 컨센서스 Surprise(컨센서스 유료→보류) · sector 채우기(quoteSummary)
+- 이벤트 온톨로지 정교화(other 빈발) · 클러스터링 · 표본 쌓이면 실제 가중치 튜닝
+
+> ※ 시장반응 검증·실제 매수권한은 별도 Strategist 에이전트 몫 (이 파트 범위 밖)

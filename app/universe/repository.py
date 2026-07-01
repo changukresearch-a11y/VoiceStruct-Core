@@ -69,3 +69,52 @@ def mark_processed(ticker: str, accession: str | None, at: str) -> None:
         conn.execute(
             "UPDATE companies SET last_accession=?, last_processed_at=? WHERE ticker=?",
             (accession, at, ticker.upper()))
+
+
+# ── 시총 기반 유니버스 확장 (priority = 시총 순위) ────────────────────
+
+def get_all_tickers(only_missing_cap: bool = False,
+                    limit: int | None = None) -> list[str]:
+    """전체(또는 시총 미보유) 티커. 시총 채우기(enrich) 대상 선정용."""
+    sql = "SELECT ticker FROM companies"
+    if only_missing_cap:
+        sql += " WHERE market_cap IS NULL"
+    sql += " ORDER BY ticker"
+    if limit is not None:
+        sql += f" LIMIT {int(limit)}"
+    with _conn() as conn:
+        return [r[0] for r in conn.execute(sql).fetchall()]
+
+
+def set_market_cap(ticker: str, market_cap: float | None,
+                   sector: str | None = None) -> None:
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE companies SET market_cap=?, sector=COALESCE(?, sector) "
+            "WHERE ticker=?", (market_cap, sector, ticker.upper()))
+
+
+def reprioritize_by_market_cap(keep_top: int | None = None) -> dict[str, int]:
+    """priority를 시총 내림차순 순위로 재설정(1=최대). 시총 없는 종목은 뒤로.
+
+    keep_top이 있으면 상위 keep_top개만 active=1, 나머지는 active=0으로
+    작업 대상(working set)을 고정한다. 반환: {ranked, active, deactivated}.
+    """
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT ticker FROM companies "
+            "ORDER BY market_cap IS NULL, market_cap DESC, ticker").fetchall()
+        active = deact = 0
+        for rank, (ticker,) in enumerate(rows, start=1):
+            if keep_top is None:
+                conn.execute("UPDATE companies SET priority=? WHERE ticker=?",
+                             (rank, ticker))
+                active += 1
+            else:
+                is_active = 1 if rank <= keep_top else 0
+                conn.execute(
+                    "UPDATE companies SET priority=?, active=? WHERE ticker=?",
+                    (rank, is_active, ticker))
+                active += is_active
+                deact += (1 - is_active)
+        return {"ranked": len(rows), "active": active, "deactivated": deact}

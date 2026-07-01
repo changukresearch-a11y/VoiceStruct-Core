@@ -59,6 +59,7 @@ def fetch_xbrl_metrics(ticker: str) -> XbrlMetrics:
     cik10, _ = _ticker_to_cik(ticker)
     out: dict[str, float | None] = {}
     fiscal: str | None = None
+    filed_at: str | None = None
 
     for metric, (tags, unit) in _CONCEPTS.items():
         units = None
@@ -76,8 +77,9 @@ def fetch_xbrl_metrics(ticker: str) -> XbrlMetrics:
         out[f"{metric}_yoy_pct"] = yoy
         if fiscal is None and latest:
             fiscal = f"{latest.get('fy')} {latest.get('fp')}"
+            filed_at = latest.get("filed")   # companyconcept의 제출일
 
-    return XbrlMetrics(fiscal=fiscal, **out)
+    return XbrlMetrics(fiscal=fiscal, filed_at=filed_at, **out)
 
 
 def fetch_latest_financials(ticker: str) -> tuple[NormalizedItem, XbrlMetrics]:
@@ -97,6 +99,6 @@ def fetch_latest_financials(ticker: str) -> tuple[NormalizedItem, XbrlMetrics]:
         title=f"{ticker.upper()} {form_type} — {metrics.fiscal}",
         body=f"정기보고({form_type}) 확정 재무수치 (SEC XBRL):\n{metrics.summary_line()}",
         meta={"form_type": form_type, "fiscal": metrics.fiscal,
-              "metrics": metrics.model_dump()},
+              "filed_at": metrics.filed_at, "metrics": metrics.model_dump()},
     )
     return item, metrics

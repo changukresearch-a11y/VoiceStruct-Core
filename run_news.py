@@ -28,6 +28,7 @@ def main() -> None:
     ap.add_argument("--ticker", default="AAPL")
     ap.add_argument("--limit", type=int, default=8)
     ap.add_argument("--llm", action="store_true", help="통과한 뉴스만 LLM 분석")
+    ap.add_argument("--save", action="store_true", help="news_signals에 저장(중복 skip)")
     args = ap.parse_args()
 
     has_key = bool(os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
@@ -38,9 +39,14 @@ def main() -> None:
     items = fetch_latest_news(args.ticker, limit=args.limit)
     print(f"📰 {args.ticker} — 수집 {len(items)}건\n")
 
-    passed = dropped = 0
+    if args.save:
+        from app.storage.db import save_news
+
+    passed = dropped = saved = 0
     for i, it in enumerate(items, 1):
         r = run_news_pipeline(it, run_llm=run_llm)
+        if args.save and save_news(r) is not None:
+            saved += 1
         tag = "🟢" if not r.dropped else "⛔"
         print(f"{tag} [{i}] ({r.source_grade}) {it.meta.get('source')} — {it.title[:70]}")
         kv = r.keyword_verdict
@@ -57,7 +63,8 @@ def main() -> None:
                   f"confirmed={s.is_confirmed} trust={s.source_trust} → {r.final_permission}")
             print(f"         {s.reason}")
 
-    print(f"\n요약: 통과 {passed} · drop {dropped} · 총 {len(items)}")
+    tail = f" · 저장 {saved}" if args.save else ""
+    print(f"\n요약: 통과 {passed} · drop {dropped}{tail} · 총 {len(items)}")
 
 
 if __name__ == "__main__":

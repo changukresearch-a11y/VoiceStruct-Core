@@ -11,17 +11,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-# 뉴스 이벤트 온톨로지 (MVP 8종, 공시와 의미축은 비슷하되 뉴스 성격 반영)
-NewsEventType = Literal[
-    "earnings",            # 실적 관련 보도
-    "guidance_change",     # 가이던스 상/하향 보도
-    "ma",                  # M&A (확정/루머 포함 — is_confirmed로 구분)
-    "analyst_rating",      # 애널리스트 상/하향
-    "product",             # 제품/계약 발표
-    "regulation_legal",    # 규제·소송·조사
-    "management_change",   # 임원 변경
-    "other",
-]
+from app.common.ontology import EventType
+
+# 공시/뉴스 공유 통일 온톨로지 사용 (app/common/ontology.py, 명세 §10).
+NewsEventType = EventType   # 하위호환 별칭
 
 Sentiment = Literal["positive", "negative", "neutral", "mixed"]
 

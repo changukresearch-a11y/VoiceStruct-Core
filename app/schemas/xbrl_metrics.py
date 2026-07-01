@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 class XbrlMetrics(BaseModel):
     fiscal: str | None = Field(None, description="최신 보고 기간 (예: '2026 Q2').")
+    filed_at: str | None = Field(None, description="최신 수치의 SEC 제출일(YYYY-MM-DD).")
 
     revenue: float | None = None
     revenue_yoy_pct: float | None = None

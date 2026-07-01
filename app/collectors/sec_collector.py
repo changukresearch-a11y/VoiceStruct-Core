@@ -73,20 +73,52 @@ def _ticker_to_cik(ticker: str) -> tuple[str, str]:
     return f"{cik:010d}", row.get("title", ticker)
 
 
-def _latest_8k_meta(cik10: str) -> dict:
+def _recent_filings_meta(cik10: str, forms: tuple[str, ...]) -> dict[str, dict]:
+    """submissions 1회 호출로 요청한 form별 '최신' 제출 메타를 반환.
+
+    문서(primaryDocument)는 다운로드하지 않는다 — 메타레벨 증분 판정용.
+    반환: {form: {accession, primary_doc, filed_at, items, form}} (없는 form은 생략).
+    """
     r = httpx.get(SEC_SUBMISSIONS_URL.format(cik10=cik10), headers=_headers(), timeout=30)
     r.raise_for_status()
     recent = r.json()["filings"]["recent"]
     items_col = recent.get("items", [""] * len(recent["form"]))
-    for i, form in enumerate(recent["form"]):
-        if form == "8-K":
-            return {
+    wanted = set(forms)
+    out: dict[str, dict] = {}
+    for i, form in enumerate(recent["form"]):            # recent는 최신순
+        if form in wanted and form not in out:           # 각 form의 첫(=최신) 건만
+            out[form] = {
                 "accession": recent["accessionNumber"][i],
                 "primary_doc": recent["primaryDocument"][i],
                 "filed_at": recent["filingDate"][i],
                 "items": items_col[i],
+                "form": form,
             }
-    raise ValueError(f"최근 제출에서 8-K를 찾지 못했습니다: CIK {cik10}")
+            if len(out) == len(wanted):
+                break
+    return out
+
+
+def peek_recent_filings(ticker: str, forms: tuple[str, ...]) -> dict[str, dict]:
+    """ticker의 요청 form별 최신 제출 메타를 문서 다운로드 없이 조회 (증분용 공개 API).
+
+    반환 dict의 각 값에는 cik/ticker/company_name도 채워, 이후 실수집을 바로 이어갈 수 있다.
+    """
+    cik10, name = _ticker_to_cik(ticker)
+    metas = _recent_filings_meta(cik10, forms)
+    for m in metas.values():
+        m["cik10"] = cik10
+        m["cik"] = str(int(cik10))
+        m["ticker"] = ticker.upper()
+        m["company_name"] = name
+    return metas
+
+
+def _latest_8k_meta(cik10: str) -> dict:
+    metas = _recent_filings_meta(cik10, ("8-K",))
+    if "8-K" not in metas:
+        raise ValueError(f"최근 제출에서 8-K를 찾지 못했습니다: CIK {cik10}")
+    return metas["8-K"]
 
 
 _TAG_RE = re.compile(r"<[^>]+>")
@@ -160,3 +192,26 @@ def fetch_latest_8k(ticker: str, use_sample: bool = True) -> NormalizedItem:
             "items_raw": meta["items"],
         },
     )
+
+
+def fetch_report_text(ticker: str, form_type: str,
+                      max_chars: int = 2_000_000) -> tuple[str | None, dict]:
+    """10-Q/10-K 등 정기보고 본문 텍스트를 반환 (리스크문구 스캔용).
+
+    XBRL 수치 경로는 본문을 안 받으므로, going concern·material weakness 같은
+    하드리스크 문구 검사를 위해 여기서 원문을 별도로 내려받는다.
+    반환: (본문텍스트|None, {accession_no, filed_at, url}).
+    """
+    metas = peek_recent_filings(ticker, (form_type,))
+    m = metas.get(form_type)
+    if not m:
+        return None, {}
+    doc_url = SEC_ARCHIVES_URL.format(
+        cik=m["cik"], acc_nodash=m["accession"].replace("-", ""),
+        doc=m["primary_doc"])
+    time.sleep(0.2)  # rate limit 예의
+    r = httpx.get(doc_url, headers=_headers(), timeout=45)
+    r.raise_for_status()
+    text = _html_to_text(r.text)[:max_chars]
+    return text, {"accession_no": m["accession"],
+                  "filed_at": m["filed_at"], "url": doc_url}
