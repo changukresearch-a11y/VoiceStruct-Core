@@ -1,10 +1,11 @@
 """
-AnalysisBundle 생성기 — 한 종목의 공시+뉴스를 돌려 Strategist 입력 번들을 만든다.
+Bundle 생성기 — 한 종목의 공시·뉴스를 돌려 Strategist 입력 번들 2개를 만든다.
 
-    python run_bundle.py --ticker NVDA --form 8-K --news-limit 8 --llm
+    python run_bundle.py --ticker NVDA --form 8-K --news-limit 8 --category "반도체" --llm
 
-실제 SEC 공시 + Google News + LLM 분석을 종목당 1개 번들로 집계 → to_prompt() 출력.
-(명세: 인터페이스명세_정보분석→Strategist.md)
+공시·뉴스는 **완전 별개 2객체**(DisclosureBundle / NewsBundle)로 분리 산출한다.
+모든 점수는 0~1 소수점, 방향은 sentiment 라벨. category는 스크리닝 에이전트가 전달.
+(회의 피드백 2026-07-02 반영)
 """
 from __future__ import annotations
 
@@ -20,7 +21,8 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 from app.collectors.news_collector import fetch_latest_news
-from app.common.analysis_bundle import build_bundle
+from app.common.analysis_bundle import (build_disclosure_bundle,
+                                        build_news_bundle)
 from app.news_pipeline import run_news_pipeline
 from app.pipeline import run_disclosure_pipeline
 
@@ -30,6 +32,8 @@ def main() -> None:
     ap.add_argument("--ticker", default="NVDA")
     ap.add_argument("--form", default="8-K", choices=["8-K", "10-Q", "10-K", "4"])
     ap.add_argument("--news-limit", type=int, default=8)
+    ap.add_argument("--category", default=None,
+                    help="종목 카테고리(섹터). 실제로는 스크리닝 에이전트가 전달.")
     ap.add_argument("--llm", action="store_true")
     ap.add_argument("--json", action="store_true", help="번들 JSON도 출력")
     args = ap.parse_args()
@@ -51,19 +55,29 @@ def main() -> None:
     passed = sum(1 for r in news_results if not r.dropped)
     print(f"   뉴스 {len(items)}건 수집 · 사전필터 통과 {passed}\n")
 
-    # 3) 번들
-    bundle = build_bundle(
-        args.ticker, as_of=date.today().isoformat(),
-        disclosure_result=disc, news_results=news_results)
+    # 3) 번들 — 공시·뉴스 완전 별개 2객체
+    as_of = date.today().isoformat()
+    company = getattr(disc.item, "company_name", None)
+    d_bundle = build_disclosure_bundle(
+        args.ticker, as_of, disclosure_result=disc,
+        company_name=company, category=args.category)
+    n_bundle = build_news_bundle(
+        args.ticker, as_of, news_results=news_results,
+        company_name=company, category=args.category)
 
     print("=" * 60)
-    print("📦 AnalysisBundle.to_prompt() — Strategist가 보는 입력:\n")
-    print(bundle.to_prompt())
+    print("📄 DisclosureBundle.to_prompt() — Strategist 입력(공시):\n")
+    print(d_bundle.to_prompt())
+    print("\n" + "-" * 60)
+    print("📰 NewsBundle.to_prompt() — Strategist 입력(뉴스):\n")
+    print(n_bundle.to_prompt())
     print("=" * 60)
 
     if args.json:
-        print("\n📋 JSON (코드/PM용):")
-        print(bundle.model_dump_json(indent=2))
+        print("\n📋 DisclosureBundle JSON:")
+        print(d_bundle.model_dump_json(indent=2))
+        print("\n📋 NewsBundle JSON:")
+        print(n_bundle.model_dump_json(indent=2))
 
 
 if __name__ == "__main__":

@@ -1,106 +1,189 @@
 """
 정보분석(공시·뉴스) → Strategist 인터페이스 계약.
 
-우리 signals(DisclosureSignal/NewsSignal)를 종목당 1개 AnalysisBundle로
-집계·압축한다. Strategist(LLM)는 to_prompt()의 압축 텍스트를, 코드(PM·게이트)는
-타입 객체를 소비한다. (명세: 인터페이스명세_정보분석→Strategist.md)
+팀 회의 피드백(2026-07-02) 반영:
+  - 공시·뉴스 결과를 **완전 별개 2객체**로 분리 (DisclosureBundle / NewsBundle).
+    (기존: 종목당 1개 AnalysisBundle로 합치고 net_sentiment로 합산 → 폐기)
+  - 모든 점수를 **0~1 소수점으로 통일** (importance·risk_score·confidence·source_trust).
+    방향(호재/악재)은 점수 부호가 아니라 sentiment 라벨로만 표현.
+    → 강도는 importance(0~1) 하나로. 기존 score(방향×강도)는 importance와 중복이라 폐기.
+  - 종목 **회사명(company_name)·카테고리(category)** 필드 추가.
+    company_name = 공시 collector가 SEC에서 채움, category = 스크리닝 에이전트가 전달.
+  - Strategist가 두 소스를 직접 결합 (우리는 합산하지 않음).
 """
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from app.common.ontology import norm_event  # 공유 온톨로지(단일 진실원천)
+from app.events.clusterer import cluster_news, summarize_buzz
 
 _CERTAINTY = {"High": 0.9, "Medium": 0.6, "Low": 0.3}
+_GRADE_SCORE = {"ALLOW": 1.0, "GRAY": 0.6, "WATCH_ONLY": 0.3, "BLOCK": 0.0}
 _BLOCK = {"BLOCK_ALL", "BLOCK_BUY"}
 
 
-def _score(importance: int | None, sentiment: str | None) -> int:
-    """방향(부호)×강도 → -10..+10."""
-    imp = importance or 0
-    if sentiment == "positive":
-        return imp
-    if sentiment == "negative":
-        return -imp
-    return 0
+def _n10(v: float | int | None) -> float:
+    """0~10 척도를 0~1로 정규화 (소수점 통일)."""
+    return round(max(0.0, min(10.0, float(v or 0))) / 10.0, 2)
 
 
-class AnalystSignal(BaseModel):
-    source: Literal["disclosure", "news"]
-    event_type: str
-    sentiment: str
-    score: int             # -10..+10 (방향×신뢰반영 강도)
-    importance: int        # 0..10 (신뢰반영 — score와 같은 기준)
-    peak_importance: int = 0  # 집계 전 최고 잠재 중요도 (뉴스 여러건 중 최대)
-    confidence: float      # 0..1
-    is_confirmed: bool
-    reason: str
+def _sign(sentiment: str | None) -> int:
+    return {"positive": 1, "negative": -1}.get(sentiment or "", 0)
+
+
+def _senti_score(signed: float) -> float:
+    """방향×강도(-1~+1)를 0~1로. 0=강악재·0.5=중립·1=강호재. mixed/neutral=0.5."""
+    return round(0.5 + 0.5 * max(-1.0, min(1.0, signed)), 2)
+
+
+def _head(ticker: str, company: str | None, category: str | None,
+          kind: str, as_of: str) -> str:
+    h = f"[{ticker}"
+    if company:
+        h += f" · {company}"
+    if category:
+        h += f" · {category}"
+    return h + f"] {kind} as_of {as_of}"
+
+
+# ── 공시 결과 (단독) ─────────────────────────────────────
+
+class DisclosureBundle(BaseModel):
+    """공시 분석 결과 — 종목당 1개, 뉴스와 완전 분리."""
+    # 종목 식별
+    ticker: str
+    company_name: str | None = None
+    category: str | None = None          # 스크리닝 에이전트가 전달
+    as_of: str
+    has_signal: int = 0                   # 0/1 (신호 유무)
+    # 공시 신호 (점수 전부 0~1)
+    event_type: str = "other"
+    sentiment: str = "neutral"           # 방향 라벨(sentiment_score에서 파생)
+    sentiment_score: float = 0.5         # 0~1: 0=강악재·0.5=중립·1=강호재
+    importance: float = 0.0              # 0~1 (강도·중요도, 방향 뺀 별도 축)
+    risk_score: float = 0.0              # 0~1
+    confidence: float = 0.0              # 0~1
+    confirmed_score: float = 0.0         # 0~1 (확정도. 공시=1.0 도장 찍힌 사실)
+    # 안전장치
+    hard_block: int = 0                   # 0/1 (안전장치 override)
+    hard_block_reason: str | None = None
+    # 근거
+    reason: str = ""
     ref: str = ""
 
-
-class AnalysisBundle(BaseModel):
-    ticker: str
-    as_of: str
-    disclosure: AnalystSignal | None = None
-    news: AnalystSignal | None = None
-    news_count: int = 0
-    news_confirmed: int = 0
-    news_rumor: int = 0
-    net_sentiment: int = 0
-    hard_block: bool = False
-    hard_block_reason: str | None = None
-    top_evidence: list[str] = Field(default_factory=list)
-
     def to_prompt(self) -> str:
-        """Strategist(LLM)가 읽는 압축 텍스트."""
-        lines = [f"[{self.ticker}] as_of {self.as_of}"]
-        if self.disclosure:
-            d = self.disclosure
-            lines.append(
-                f" 공시: {d.event_type} / {d.sentiment}({d.score:+d}) "
-                f"중요도{d.importance} conf{d.confidence} "
-                f"{'확정' if d.is_confirmed else '미확정'}")
-            if d.reason:
-                lines.append(f'       "{d.reason}"')
-        if self.news:
-            n = self.news
-            # 잠재 중요도가 신뢰반영 값보다 크면(예: 실적 헤드라인이지만 저신뢰) 병기
-            peak = (f" [최고imp{n.peak_importance}·저신뢰]"
-                    if n.peak_importance > n.importance else "")
-            lines.append(
-                f" 뉴스: {self.news_count}건(확정{self.news_confirmed}·"
-                f"루머{self.news_rumor}) → {n.sentiment}({n.score:+d}) "
-                f"중요도{n.importance} conf{n.confidence}{peak}")
-            for ev in self.top_evidence:
-                lines.append(f'       "{ev}"')
+        head = _head(self.ticker, self.company_name, self.category, "공시", self.as_of)
+        if not self.has_signal:
+            return head + f"\n 공시: 신호 없음 · hard_block={self.hard_block}"
+        lines = [head, (
+            f" 공시: {self.event_type} / {self.sentiment}({self.sentiment_score}) "
+            f"중요도{self.importance} 위험{self.risk_score} conf{self.confidence} "
+            f"확정{self.confirmed_score}")]
+        if self.reason:
+            lines.append(f'       "{self.reason}"')
         lines.append(
-            f" 종합: net_sentiment {self.net_sentiment:+d} · "
-            f"hard_block={str(self.hard_block).lower()}"
+            f" 종합: hard_block={self.hard_block}"
             + (f" ({self.hard_block_reason})" if self.hard_block else ""))
         return "\n".join(lines)
 
 
-# ── 어댑터: 우리 result/signal → envelope ────────────────────────────
+# ── 뉴스 결과 (단독) ─────────────────────────────────────
 
-def from_disclosure(result: Any) -> AnalystSignal | None:
-    sig = getattr(result, "signal", None)
+class NewsBundle(BaseModel):
+    """뉴스 분석 결과 — 종목당 1개, 공시와 완전 분리. 화제성 포함."""
+    ticker: str
+    company_name: str | None = None
+    category: str | None = None
+    as_of: str
+    has_signal: int = 0                   # 0/1 (신호 유무)
+    # 건수
+    news_count: int = 0
+    news_confirmed: int = 0
+    news_rumor: int = 0
+    # 뉴스 대표 신호 (0~1)
+    event_type: str = "other"
+    sentiment: str = "neutral"           # 방향 라벨(sentiment_score에서 파생)
+    sentiment_score: float = 0.5         # 0~1: 0=강악재·0.5=중립·1=강호재
+    importance: float = 0.0              # 0~1 (강도, 신뢰가중)
+    peak_importance: float = 0.0         # 0~1 (집계 전 최고 잠재)
+    risk_score: float = 0.0              # 0~1
+    confidence: float = 0.0              # 0~1
+    source_trust: float = 0.0            # 0~1 (뉴스 전용, LLM 판단)
+    grade_score: float = 0.0             # 0~1 (출처 정책등급: ALLOW1·GRAY.6·WATCH.3·BLOCK0)
+    confirmed_score: float = 0.0         # 0~1 (확정 비율 = 확정건수/전체)
+    # 화제성 (뉴스 전용)
+    event_count: int = 0                 # 고유 이벤트(클러스터) 수
+    top_buzz: int = 0                    # 최대 화제 이벤트의 기사 수
+    cross_source_confirmed: int = 0       # 0/1 (ALLOW 2곳+ 교차확인)
+    # 안전장치
+    hard_block: int = 0                   # 0/1 (안전장치 override)
+    hard_block_reason: str | None = None
+    # 근거
+    top_evidence: list[str] = Field(default_factory=list)
+    reason: str = ""
+    ref: str = ""
+
+    def to_prompt(self) -> str:
+        head = _head(self.ticker, self.company_name, self.category, "뉴스", self.as_of)
+        if not self.has_signal:
+            base = f"\n 뉴스: {self.news_count}건 · 신호 없음"
+            if self.event_count:
+                base += f" · {self.event_count}이벤트·최대화제{self.top_buzz}"
+            return head + base
+        buzz = ""
+        if self.event_count:
+            cross = "교차확인✔" if self.cross_source_confirmed else "교차확인✘"
+            buzz = f" · {self.event_count}이벤트·최대화제{self.top_buzz}({cross})"
+        peak = (f" [최고imp{self.peak_importance}·저신뢰]"
+                if self.peak_importance > self.importance else "")
+        lines = [head, (
+            f" 뉴스: {self.news_count}건(확정{self.news_confirmed}·"
+            f"루머{self.news_rumor}){buzz} → {self.sentiment}({self.sentiment_score}) "
+            f"중요도{self.importance} 신뢰{self.source_trust} 등급{self.grade_score} "
+            f"conf{self.confidence}{peak}")]
+        for ev in self.top_evidence:
+            lines.append(f'       "{ev}"')
+        lines.append(
+            f" 종합: hard_block={self.hard_block}"
+            + (f" ({self.hard_block_reason})" if self.hard_block else ""))
+        return "\n".join(lines)
+
+
+# ── 빌더 ────────────────────────────────────────────────
+
+def build_disclosure_bundle(ticker: str, as_of: str, disclosure_result: Any = None,
+                            company_name: str | None = None,
+                            category: str | None = None) -> DisclosureBundle:
+    b = DisclosureBundle(ticker=ticker.upper(), as_of=as_of,
+                         company_name=company_name, category=category)
+    if disclosure_result is None:
+        return b
+    b.company_name = company_name or getattr(
+        disclosure_result.item, "company_name", None)
+    if getattr(disclosure_result, "final_permission", None) in _BLOCK:
+        b.hard_block = 1
+        b.hard_block_reason = getattr(disclosure_result, "final_reason", None)
+
+    sig = getattr(disclosure_result, "signal", None)
     if sig is None:
-        return None
+        return b
     conf = _CERTAINTY.get(getattr(sig, "certainty_level", None), 0.5)
-    meta = getattr(result.item, "meta", {}) or {}
-    return AnalystSignal(
-        source="disclosure",
-        event_type=norm_event(getattr(sig, "event_type", None)),
-        sentiment=getattr(sig, "sentiment", None) or "neutral",
-        score=_score(getattr(sig, "importance", 0), getattr(sig, "sentiment", None)),
-        importance=getattr(sig, "importance", 0) or 0,
-        confidence=round(conf, 2),
-        is_confirmed=True,   # 공시 = 법적 의무·거짓 시 처벌 = 도장 찍힌 사실
-        reason=getattr(sig, "reason", "") or "",
-        ref=meta.get("accession_no") or getattr(result.item, "url", "") or "",
-    )
+    meta = getattr(disclosure_result.item, "meta", {}) or {}
+    b.has_signal = 1
+    b.confirmed_score = 1.0              # 공시 = 법적 의무 제출 = 확정 사실
+    b.event_type = norm_event(getattr(sig, "event_type", None))
+    b.sentiment = getattr(sig, "sentiment", None) or "neutral"
+    b.importance = _n10(getattr(sig, "importance", 0))
+    b.sentiment_score = _senti_score(_sign(b.sentiment) * b.importance)
+    b.risk_score = _n10(getattr(sig, "risk_score", 0))
+    b.confidence = round(conf, 2)
+    b.reason = getattr(sig, "reason", "") or ""
+    b.ref = meta.get("accession_no") or getattr(
+        disclosure_result.item, "url", "") or ""
+    return b
 
 
 def _news_conf(sig: Any) -> float:
@@ -110,73 +193,65 @@ def _news_conf(sig: Any) -> float:
     return max(0.0, min(1.0, c))
 
 
-def from_news(results: list) -> tuple[AnalystSignal | None, int, int, list[str]]:
-    """분석된 뉴스 여러 건 → 대표 1개로 집계. (signal, 확정수, 루머수, top근거)."""
+def build_news_bundle(ticker: str, as_of: str, news_results: list | None = None,
+                      company_name: str | None = None,
+                      category: str | None = None) -> NewsBundle:
+    b = NewsBundle(ticker=ticker.upper(), as_of=as_of,
+                   company_name=company_name, category=category)
+    results = news_results or []
+
+    # 화제성 클러스터링 — dropped 아닌(사전필터 통과) 뉴스 기준. LLM 불필요.
+    passed = [r for r in results if not getattr(r, "dropped", False)]
+    if passed:
+        buzz = summarize_buzz(cluster_news(passed))
+        b.event_count = buzz["event_count"]
+        b.top_buzz = buzz["top_buzz"]
+        b.cross_source_confirmed = int(buzz["cross_source_confirmed"])
+
+    # hard_block — 어느 뉴스든 BLOCK류면 발동
+    for r in results:
+        if getattr(r, "final_permission", None) in _BLOCK:
+            b.hard_block = 1
+            b.hard_block_reason = b.hard_block_reason or getattr(r, "final_reason", None)
+
     analyzed = [r for r in results if getattr(r, "signal", None) is not None]
     if not analyzed:
-        return None, 0, 0, []
+        return b
+
+    b.has_signal = 1
     confirmed = sum(1 for r in analyzed if r.signal.is_confirmed)
-    rumor = len(analyzed) - confirmed
+    b.news_confirmed = confirmed
+    b.news_rumor = len(analyzed) - confirmed
+    b.news_count = len(analyzed)
 
     weights = [_news_conf(r.signal) for r in analyzed]
-    imps = [r.signal.importance or 0 for r in analyzed]
-    scores = [_score(r.signal.importance, r.signal.sentiment) for r in analyzed]
     tw = sum(weights) or 1.0
-    # 강한 악재(≤ -7) 있으면 보수적으로 그쪽, 아니면 신뢰가중 평균
-    agg_score = min(scores) if min(scores) <= -7 else round(
-        sum(s * w for s, w in zip(scores, weights)) / tw)
-    # importance도 신뢰가중 평균 → score와 같은 기준(불일치 제거). peak는 별도 보존.
-    agg_importance = round(sum(i * w for i, w in zip(imps, weights)) / tw)
-    peak_importance = max(imps)
-    agg_conf = round(sum(weights) / len(weights), 2)
-    sent = "positive" if agg_score > 0 else "negative" if agg_score < 0 else "neutral"
+    # 방향 포함 강도 (-1~+1) — 집계에만 쓰고, 최종은 방향(sentiment)/강도(importance) 분리
+    signed = [_n10(r.signal.importance) * _sign(r.signal.sentiment) for r in analyzed]
+    agg_signed = (min(signed) if min(signed) <= -0.7
+                  else sum(s * w for s, w in zip(signed, weights)) / tw)
+    b.sentiment = ("positive" if agg_signed > 0
+                   else "negative" if agg_signed < 0 else "neutral")
+    b.sentiment_score = _senti_score(agg_signed)      # 0~1 (방향×강도)
+    b.importance = round(abs(agg_signed), 2)          # 방향 뺀 강도
+    b.peak_importance = _n10(max(r.signal.importance or 0 for r in analyzed))
+    b.risk_score = round(
+        sum(_n10(r.signal.risk_score) * w for r, w in zip(analyzed, weights)) / tw, 2)
+    b.source_trust = round(
+        sum((r.signal.source_trust or 0) * w for r, w in zip(analyzed, weights)) / tw, 2)
+    b.confidence = round(sum(weights) / len(weights), 2)
+    # 출처 정책등급을 점수로 (ALLOW1·GRAY.6·WATCH.3·BLOCK0) — 신뢰가중 평균
+    b.grade_score = round(sum(
+        _GRADE_SCORE.get(getattr(r, "source_grade", None), 0.6) * w
+        for r, w in zip(analyzed, weights)) / tw, 2)
+    b.confirmed_score = round(confirmed / b.news_count, 2)  # 확정 비율
 
     rep = max(analyzed, key=lambda r: (r.signal.importance or 0))
     ordered = sorted(analyzed, key=lambda r: -(r.signal.importance or 0))
-    top_ev = [
+    b.event_type = norm_event(rep.signal.event_type)
+    b.reason = rep.signal.reason or ""
+    b.ref = getattr(rep.item, "url", "") or ""
+    b.top_evidence = [
         f"{(r.item.meta.get('source') or '').strip()}: {r.item.title[:60]}"
         for r in ordered[:1]]
-
-    sig = AnalystSignal(
-        source="news",
-        event_type=norm_event(rep.signal.event_type),
-        sentiment=sent, score=agg_score,
-        importance=agg_importance, peak_importance=peak_importance,
-        confidence=agg_conf,
-        is_confirmed=confirmed >= rumor and confirmed > 0,
-        reason=rep.signal.reason or "",
-        ref=getattr(rep.item, "url", "") or "",
-    )
-    return sig, confirmed, rumor, top_ev
-
-
-def _combine(d: AnalystSignal | None, n: AnalystSignal | None) -> int:
-    vals = [(s.score, s.confidence) for s in (d, n) if s is not None]
-    if not vals:
-        return 0
-    scores = [v[0] for v in vals]
-    if min(scores) <= -7:                 # 강한 악재 우선(가장 보수적)
-        return min(scores)
-    tw = sum(w for _, w in vals) or 1.0
-    return round(sum(s * w for s, w in vals) / tw)
-
-
-def build_bundle(ticker: str, as_of: str, disclosure_result: Any = None,
-                 news_results: list | None = None) -> AnalysisBundle:
-    d = from_disclosure(disclosure_result) if disclosure_result else None
-    n, conf, rum, top = (from_news(news_results) if news_results else (None, 0, 0, []))
-
-    hb = False
-    hbr = None
-    if disclosure_result and getattr(disclosure_result, "final_permission", None) in _BLOCK:
-        hb, hbr = True, getattr(disclosure_result, "final_reason", None)
-    for r in (news_results or []):
-        if getattr(r, "final_permission", None) in _BLOCK:
-            hb = True
-            hbr = hbr or getattr(r, "final_reason", None)
-
-    return AnalysisBundle(
-        ticker=ticker.upper(), as_of=as_of, disclosure=d, news=n,
-        news_count=conf + rum, news_confirmed=conf, news_rumor=rum,
-        net_sentiment=_combine(d, n), hard_block=hb, hard_block_reason=hbr,
-        top_evidence=top)
+    return b
