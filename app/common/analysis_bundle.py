@@ -18,7 +18,6 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.common.ontology import norm_event  # 공유 온톨로지(단일 진실원천)
-from app.events.clusterer import cluster_news, summarize_buzz
 
 _CERTAINTY = {"High": 0.9, "Medium": 0.6, "Low": 0.3}
 _GRADE_SCORE = {"ALLOW": 1.0, "GRAY": 0.6, "WATCH_ONLY": 0.3, "BLOCK": 0.0}
@@ -93,7 +92,7 @@ class DisclosureBundle(BaseModel):
 # ── 뉴스 결과 (단독) ─────────────────────────────────────
 
 class NewsBundle(BaseModel):
-    """뉴스 분석 결과 — 종목당 1개, 공시와 완전 분리. 화제성 포함."""
+    """뉴스 분석 결과 — 종목당 1개, 공시와 완전 분리."""
     ticker: str
     company_name: str | None = None
     category: str | None = None
@@ -114,10 +113,6 @@ class NewsBundle(BaseModel):
     source_trust: float = 0.0            # 0~1 (뉴스 전용, LLM 판단)
     grade_score: float = 0.0             # 0~1 (출처 정책등급: ALLOW1·GRAY.6·WATCH.3·BLOCK0)
     confirmed_score: float = 0.0         # 0~1 (확정 비율 = 확정건수/전체)
-    # 화제성 (뉴스 전용)
-    event_count: int = 0                 # 고유 이벤트(클러스터) 수
-    top_buzz: int = 0                    # 최대 화제 이벤트의 기사 수
-    cross_source_confirmed: int = 0       # 0/1 (ALLOW 2곳+ 교차확인)
     # 안전장치
     hard_block: int = 0                   # 0/1 (안전장치 override)
     hard_block_reason: str | None = None
@@ -129,19 +124,12 @@ class NewsBundle(BaseModel):
     def to_prompt(self) -> str:
         head = _head(self.ticker, self.company_name, self.category, "뉴스", self.as_of)
         if not self.has_signal:
-            base = f"\n 뉴스: {self.news_count}건 · 신호 없음"
-            if self.event_count:
-                base += f" · {self.event_count}이벤트·최대화제{self.top_buzz}"
-            return head + base
-        buzz = ""
-        if self.event_count:
-            cross = "교차확인✔" if self.cross_source_confirmed else "교차확인✘"
-            buzz = f" · {self.event_count}이벤트·최대화제{self.top_buzz}({cross})"
+            return head + f"\n 뉴스: {self.news_count}건 · 신호 없음"
         peak = (f" [최고imp{self.peak_importance}·저신뢰]"
                 if self.peak_importance > self.importance else "")
         lines = [head, (
             f" 뉴스: {self.news_count}건(확정{self.news_confirmed}·"
-            f"루머{self.news_rumor}){buzz} → {self.sentiment}({self.sentiment_score}) "
+            f"루머{self.news_rumor}) → {self.sentiment}({self.sentiment_score}) "
             f"중요도{self.importance} 신뢰{self.source_trust} 등급{self.grade_score} "
             f"conf{self.confidence}{peak}")]
         for ev in self.top_evidence:
@@ -199,14 +187,6 @@ def build_news_bundle(ticker: str, as_of: str, news_results: list | None = None,
     b = NewsBundle(ticker=ticker.upper(), as_of=as_of,
                    company_name=company_name, category=category)
     results = news_results or []
-
-    # 화제성 클러스터링 — dropped 아닌(사전필터 통과) 뉴스 기준. LLM 불필요.
-    passed = [r for r in results if not getattr(r, "dropped", False)]
-    if passed:
-        buzz = summarize_buzz(cluster_news(passed))
-        b.event_count = buzz["event_count"]
-        b.top_buzz = buzz["top_buzz"]
-        b.cross_source_confirmed = int(buzz["cross_source_confirmed"])
 
     # hard_block — 어느 뉴스든 BLOCK류면 발동
     for r in results:

@@ -83,7 +83,7 @@
     <div class="kicker">Quantinue · 인터페이스 계약</div>
     <h1>데이터 스키마 · 인터페이스 명세 <span class="grad">v2</span><br>정보분석(공시·뉴스) → Strategist</h1>
     <p class="lead">2026-07-02 팀 회의 피드백 반영. 공시·뉴스를 <b>완전 별개 2객체</b>로,
-    모든 점수를 <b>0~1 소수점</b>으로 통일하고, 회사명·카테고리·화제성 필드를 추가한 최신 계약.</p>
+    모든 점수를 <b>0~1 소수점</b>으로 통일하고, 회사명·카테고리 필드를 추가한 최신 계약.</p>
     <div class="meta-row">
       <span class="pill">작성 <b>정창욱</b></span>
       <span class="pill">대상 <b>이은미(Strategist) · 전 팀</b></span>
@@ -101,7 +101,7 @@
     <a href="#s2">2. 공통 규약</a>
     <a href="#s3">3. DisclosureBundle</a>
     <a href="#s4">4. NewsBundle</a>
-    <a href="#s5">5. 집계·화제성</a>
+    <a href="#s5">5. 집계 규칙</a>
     <a href="#s6">6. 렌더 샘플</a>
     <a href="#s7">7. 전달·열린질문</a>
   </div>
@@ -118,16 +118,15 @@
     </div>
     <div class="card" style="border-color:rgba(34,199,199,.32)">
       <div class="schemahead"><span class="tag t-news">뉴스</span><span class="st">NewsBundle</span></div>
-      <p style="color:var(--sub);font-size:14px;margin-top:6px">뉴스 분석 결과 단독. 화제성(Buzz) 포함. 공시와 완전 분리.</p>
+      <p style="color:var(--sub);font-size:14px;margin-top:6px">뉴스 분석 결과 단독. 공시와 완전 분리.</p>
     </div>
   </div>
   <div class="card">
-    <h3 style="margin-top:0">핵심 4가지</h3>
+    <h3 style="margin-top:0">핵심 3가지</h3>
     <table>
       <tr><td><b>① 2객체 분리</b></td><td>공시·뉴스는 별개로 넘어감. 합산(net_sentiment) 폐기 → 결합은 Strategist가.</td></tr>
       <tr><td><b>② 점수 0~1</b></td><td>모든 점수 <span class="range">0.0~1.0</span> 소수점. 방향도 <code>sentiment_score</code>(0=악재·0.5=중립·1=호재)로 점수화, <code>sentiment</code> 라벨 병기.</td></tr>
       <tr><td><b>③ 종목 식별 3필드</b></td><td><code>ticker</code> · <code>company_name</code>(공시가 SEC 자동) · <code>category</code>(스크리닝 전달).</td></tr>
-      <tr><td><b>④ 화제성</b></td><td><code>event_count</code>·<code>top_buzz</code>·<code>cross_source_confirmed</code> — NewsBundle에만.</td></tr>
     </table>
   </div>
 </section>
@@ -142,7 +141,6 @@
     <tr><td>방향 표현</td><td><span class="tag t-old">score 부호 −10~+10</span></td><td><span class="tag t-new">sentiment_score 0~1 +라벨</span></td><td>방향을 0~1 축에 인코딩, 강도는 importance로 분리</td></tr>
     <tr><td>합산</td><td><span class="tag t-old">net_sentiment</span></td><td><span class="tag t-new">없음</span></td><td>합산은 Strategist 책임</td></tr>
     <tr><td>종목 정보</td><td><span class="tag t-old">ticker만</span></td><td><span class="tag t-new">+company_name +category</span></td><td>회의 피드백</td></tr>
-    <tr><td>화제성</td><td><span class="tag t-old">없음</span></td><td><span class="tag t-new">event_count·top_buzz·cross</span></td><td>반복보도 과대평가 방지</td></tr>
   </table>
 </section>
 
@@ -171,7 +169,7 @@
         <tr><td><code>source_trust</code></td><td>(뉴스) 출처 신뢰도(LLM)</td></tr>
         <tr><td><code>grade_score</code></td><td>(뉴스) 출처 등급 ALLOW1·GRAY.6·WATCH.3·BLOCK0</td></tr>
         <tr><td><code>confirmed_score</code></td><td>확정도. 공시 1.0 / 뉴스 확정비율</td></tr>
-        <tr><td>bool 플래그</td><td>has_signal·hard_block·cross → <b>0/1 정수</b></td></tr>
+        <tr><td>bool 플래그</td><td>has_signal·hard_block → <b>0/1 정수</b></td></tr>
       </table>
     </div>
     <div class="card">
@@ -225,7 +223,7 @@
 <!-- 4 -->
 <section id="s4">
   <h2><span class="num">4</span> <span style="color:#66e3e3">NewsBundle</span> — 뉴스 결과 <span class="tag t-news">뉴스</span></h2>
-  <p class="section-sub">뉴스 분석 결과 단독. 화제성(Buzz) 포함, 공시와 완전 분리.</p>
+  <p class="section-sub">뉴스 분석 결과 단독. 공시와 완전 분리.</p>
 
   <pre><span class="c-key">class</span> NewsBundle:
     ticker, company_name, category, as_of      <span class="c-com"># 종목 식별(공통)</span>
@@ -243,9 +241,6 @@
     source_trust: float             <span class="c-good"># 0~1 (LLM 판단)</span>
     grade_score: float              <span class="c-good"># 0~1 (출처등급 ALLOW1·GRAY.6·WATCH.3·BLOCK0)</span>
     confirmed_score: float          <span class="c-good"># 0~1 (확정 비율)</span>
-    event_count: int                <span class="c-str"># ★화제성: 고유 이벤트 수</span>
-    top_buzz: int                   <span class="c-str"># ★화제성: 최대 화제 기사 수</span>
-    cross_source_confirmed: int     <span class="c-str"># ★화제성 0/1: ALLOW 2곳+ 교차확인</span>
     hard_block: int                 <span class="c-com"># 0/1</span>
     hard_block_reason: str | None
     top_evidence: list[str]
@@ -260,41 +255,20 @@
     <tr><td><code>source_trust</code></td><td class="range">0~1</td><td>(뉴스 전용) 출처 신뢰도(LLM). 소셜·루머 방어</td></tr>
     <tr><td><code>grade_score</code></td><td class="range">0~1</td><td>출처 <b>정책등급</b> 점수. ALLOW1·GRAY.6·WATCH.3·BLOCK0 (신뢰가중)</td></tr>
     <tr><td><code>confirmed_score</code></td><td class="range">0~1</td><td>확정 비율 = 확정건수 / 전체</td></tr>
-    <tr><td><code>event_count</code></td><td class="range">int</td><td>반복보도를 묶은 <b>고유 이벤트 수</b>. news_count와 구분</td></tr>
-    <tr><td><code>top_buzz</code></td><td class="range">int</td><td>가장 시끄러운 이벤트의 기사 수 (화제성 강도)</td></tr>
-    <tr><td><code>cross_source_confirmed</code></td><td class="range">0/1</td><td>서로 다른 <b>ALLOW급 출처 2곳+</b>가 같은 이벤트 확인</td></tr>
     <tr><td><code>top_evidence</code></td><td class="range">list</td><td>대표 근거 헤드라인(나머지는 DB)</td></tr>
   </table>
-
-  <div class="callout warn">
-    <div class="co-t">화제성 ≠ 신뢰</div>
-    <code>top_buzz</code>(얼마나 시끄러운가)와 <code>cross_source_confirmed</code>(믿을 출처 교차확인)를 <b>분리</b>한다.
-    소셜 buzz 폭발은 오히려 펌프 위험이라, buzz는 전체를 세고 교차확인은 ALLOW급만 센다.
-  </div>
 </section>
 
 <!-- 5 -->
 <section id="s5">
-  <h2><span class="num">5</span> 집계 · 화제성 규칙</h2>
-  <div class="grid c2">
-    <div class="card">
-      <h3 style="margin-top:0">5-1. 뉴스 여러 건 → 대표 1개</h3>
-      <table style="margin-top:4px">
-        <tr><td>방향/강도</td><td>신뢰가중. 단 강한 악재(signed ≤ −0.7)면 보수적으로 그쪽</td></tr>
-        <tr><td><code>importance</code></td><td>신뢰가중 평균(방향 뺀 크기)</td></tr>
-        <tr><td><code>confidence</code></td><td>certainty × is_confirmed × source_trust 평균</td></tr>
-        <tr><td><code>hard_block</code></td><td>어느 뉴스든 BLOCK류면 1</td></tr>
-      </table>
-    </div>
-    <div class="card">
-      <h3 style="margin-top:0">5-2. 화제성 클러스터링 <span style="color:var(--sub);font-size:12px">(확정 2026-07-02)</span></h3>
-      <table style="margin-top:4px">
-        <tr><td>Jaccard 유사도</td><td class="range">≥ 0.35</td><td>정규화 후</td></tr>
-        <tr><td>시간창</td><td class="range">72h</td><td>실적·M&A 반복</td></tr>
-        <tr><td>cross 기준</td><td class="range">ALLOW 2곳+</td><td>Reuters·Bloomberg 등</td></tr>
-      </table>
-      <p style="color:var(--sub);font-size:13px;margin-bottom:0">구현 <code>app/events/clusterer.py</code> — LLM 없이 코드로만.</p>
-    </div>
+  <h2><span class="num">5</span> 집계 규칙 — 뉴스 여러 건 → 대표 1개</h2>
+  <div class="card">
+    <table style="margin-top:4px">
+      <tr><td>방향/강도</td><td>신뢰가중. 단 강한 악재(signed ≤ −0.7)면 보수적으로 그쪽</td></tr>
+      <tr><td><code>importance</code></td><td>신뢰가중 평균(방향 뺀 크기)</td></tr>
+      <tr><td><code>confidence</code></td><td>certainty × is_confirmed × source_trust 평균</td></tr>
+      <tr><td><code>hard_block</code></td><td>어느 뉴스든 BLOCK류면 1</td></tr>
+    </table>
   </div>
 </section>
 
@@ -309,7 +283,7 @@
  종합: hard_block=<span class="c-good">0</span></pre>
 
   <pre>[NVDA · NVIDIA CORP · 반도체] 뉴스 as_of 2026-07-02
- 뉴스: 3건(확정2·루머1) · <span class="c-str">1이벤트·최대화제3(교차확인✔)</span> → <span class="c-good">positive(0.84)</span> 중요도0.67 신뢰0.88 등급<span class="c-str">0.95</span> conf0.6 [최고imp0.8·저신뢰]
+ 뉴스: 3건(확정2·루머1) → <span class="c-good">positive(0.84)</span> 중요도0.67 신뢰0.88 등급<span class="c-str">0.95</span> conf0.6 [최고imp0.8·저신뢰]
        "reuters.com: Nvidia earnings beat expectations Q2"
  종합: hard_block=<span class="c-good">0</span></pre>
 
@@ -319,8 +293,7 @@
   <span class="c-key">"has_signal"</span>: 1, <span class="c-key">"news_count"</span>: 3, <span class="c-key">"news_confirmed"</span>: 2, <span class="c-key">"news_rumor"</span>: 1,
   <span class="c-key">"sentiment"</span>: "positive", <span class="c-key">"sentiment_score"</span>: 0.84, <span class="c-key">"importance"</span>: 0.67,
   <span class="c-key">"risk_score"</span>: 0.22, <span class="c-key">"confidence"</span>: 0.6, <span class="c-key">"source_trust"</span>: 0.88,
-  <span class="c-key">"grade_score"</span>: 0.95, <span class="c-key">"confirmed_score"</span>: 0.67,
-  <span class="c-key">"event_count"</span>: 1, <span class="c-key">"top_buzz"</span>: 3, <span class="c-key">"cross_source_confirmed"</span>: 1, <span class="c-key">"hard_block"</span>: 0
+  <span class="c-key">"grade_score"</span>: 0.95, <span class="c-key">"confirmed_score"</span>: 0.67, <span class="c-key">"hard_block"</span>: 0
 }</pre>
 
   <pre>[XYZ · Example Corp · 바이오] 공시 as_of 2026-07-02
@@ -348,14 +321,13 @@
         <li><b>결합 위치</b> — 공시·뉴스 합칠 가중치 (우리는 합산 안 함)</li>
         <li><b>집계 계수</b> — 신뢰·최신성 초기값 → 백테스트로 수동 튜닝</li>
         <li><b>category 체계</b> — GICS 섹터? 자체 분류? 라벨 표준 합의</li>
-        <li><b>화제성 활용</b> — top_buzz·cross를 신뢰 가중에 어떻게 반영</li>
       </ol>
     </div>
   </div>
   <div class="callout good">
     <div class="co-t">이 문서 = 최신 계약</div>
     구 <code>인터페이스명세_정보분석→Strategist.md</code>(v1)는 폐기. 이 v2로 대체.
-    구현: <code>app/common/analysis_bundle.py</code> · <code>app/events/clusterer.py</code> · <code>app/common/ontology.py</code>
+    구현: <code>app/common/analysis_bundle.py</code> · <code>app/common/ontology.py</code>
   </div>
 </section>
 
