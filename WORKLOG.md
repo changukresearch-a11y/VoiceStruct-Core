@@ -84,7 +84,7 @@ python run_skeleton.py --ticker NVDA
 
 ### 뉴스 (run_news.py)
 ```bash
-# Google News RSS 실수집 + 출처4단계 + 키워드필터 (LLM 없이 사전필터만)
+# Google News RSS 실수집 + 출처3단계 + 키워드필터 (LLM 없이 사전필터만)
 python run_news.py --ticker AAPL --limit 8
 
 # 통과분 LLM 분석까지 (+ DB 저장, 중복 skip)
@@ -154,7 +154,7 @@ DB 파일: `data/quantinue.sqlite` (gitignore됨)
 | 공시 8-K | SEC 수집 → Item 라우터 → 하드룰 → LLM 이벤트해석 |
 | 공시 10-Q/K | XBRL companyconcept(코드)로 YoY 수치 → LLM 수치해석 |
 | 공시 Form 4 | raw XML 파싱 → 코드 스코어링(매수=호재/매도=악재/베스팅=중립) |
-| 뉴스 | Google News RSS 수집 → 출처4단계 + 키워드필터(화이트우선) → LLM(is_confirmed·source_trust) |
+| 뉴스 | Google News RSS 수집 → 출처3단계(ALLOW/GRAY/BLOCK, 소셜=GRAY) + 키워드필터(화이트우선) → LLM(is_confirmed·source_trust) |
 | 공통 배관 | NormalizedItem · 최종권한 결정(6단계, 가장 보수적) · SQLite 저장 |
 | 유니버스 | companies 테이블 · 시드 50 · 배치 러너 · 증분 처리 · **SEC 후보 대량적재 + Yahoo 시총 enrich + priority=시총순위(상위 K만 active)** |
 | 스케줄러 | 우선순위 순회 · **메타레벨 증분(peek→문서 전 skip)** · 뉴스 통합 · 주기 루프(run_forever) · processed_filings 테이블 |

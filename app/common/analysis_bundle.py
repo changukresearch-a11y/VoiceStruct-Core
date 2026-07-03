@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 from app.common.ontology import norm_event  # 공유 온톨로지(단일 진실원천)
 
 _CERTAINTY = {"High": 0.9, "Medium": 0.6, "Low": 0.3}
-_GRADE_SCORE = {"ALLOW": 1.0, "GRAY": 0.6, "WATCH_ONLY": 0.3, "BLOCK": 0.0}
+_GRADE_SCORE = {"ALLOW": 1.0, "GRAY": 0.6, "BLOCK": 0.0}   # WATCH_ONLY 소셜 등급 제거(팀 결정)
 _BLOCK = {"BLOCK_ALL", "BLOCK_BUY"}
 
 
@@ -172,7 +172,7 @@ class NewsBundle(BaseModel):
     risk_score: float = 0.0              # 0~1
     confidence: float = 0.0              # 0~1
     source_trust: float = 0.0            # 0~1 (뉴스 전용, LLM 판단)
-    grade_score: float = 0.0             # 0~1 (출처 정책등급: ALLOW1·GRAY.6·WATCH.3·BLOCK0)
+    grade_score: float = 0.0             # 0~1 (출처 정책등급: ALLOW1·GRAY.6·BLOCK0)
     confirmed_score: float = 0.0         # 0~1 (확정 비율 = 확정건수/전체)
     fact_check: str = ""                  # 팩트체크 상태 한 문장(코드 판정)
     # 안전장치
@@ -309,7 +309,7 @@ def build_news_bundle(ticker: str, as_of: str, news_results: list | None = None,
         sum(_n10(r.signal.risk_score) * w for r, w in zip(analyzed, weights)) / tw, 2)
     b.source_trust = round(
         sum((r.signal.source_trust or 0) * w for r, w in zip(analyzed, weights)) / tw, 2)
-    # 출처 정책등급을 점수로 (ALLOW1·GRAY.6·WATCH.3·BLOCK0) — 신뢰가중 평균
+    # 출처 정책등급을 점수로 (ALLOW1·GRAY.6·BLOCK0, 소셜/미등록=GRAY) — 신뢰가중 평균
     b.grade_score = round(sum(
         _GRADE_SCORE.get(getattr(r, "source_grade", None), 0.6) * w
         for r, w in zip(analyzed, weights)) / tw, 2)

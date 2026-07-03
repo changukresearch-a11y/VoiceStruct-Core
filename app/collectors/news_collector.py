@@ -2,7 +2,7 @@
 뉴스 수집기 (공시 sec_collector와 별도, 공통 NormalizedItem 반환).
 
 실수집: Google News RSS (키 불필요). <source> 태그가 출처명+도메인을 제공해
-출처 4단계 정책(source_trust_policy)에 바로 연결된다. 신호는 헤드라인에 집중.
+출처 3단계 정책(source_trust_policy)에 바로 연결된다. 신호는 헤드라인에 집중.
 fetch_sample_news()는 배선 검증용 내장 샘플로 유지.
 """
 from __future__ import annotations

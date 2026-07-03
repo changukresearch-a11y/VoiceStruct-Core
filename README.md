@@ -64,7 +64,7 @@ python run_skeleton.py --ticker AAPL --form 10-Q --live --llm --save
 ## 이후 완료된 것 (상세는 WORKLOG.md)
 
 - ✅ Form 4 XML 파서 (내부자 거래, 100% 코드)
-- ✅ 뉴스 어댑터 (RSS 실수집 + 출처 4단계 + 키워드 필터)
+- ✅ 뉴스 어댑터 (RSS 실수집 + 출처 3단계(ALLOW/GRAY/BLOCK, 소셜=GRAY) + 키워드 필터)
 - ✅ 유니버스 배치 (`run_universe.py`, companies 50개 + 증분)
 - ✅ **수집 스케줄러** (`run_scheduler.py`) — 주기 순회 + 메타레벨 증분(문서 다운로드 전 skip) + 뉴스 통합
   ```bash

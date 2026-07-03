@@ -5,7 +5,7 @@
     python run_news.py --ticker AAPL --llm           # 통과분 LLM 분석까지
     python run_news.py --ticker AAPL --limit 8 --llm
 
-Google News RSS 실수집 → 출처 4단계 + 키워드 필터 → (통과분) LLM 분석.
+Google News RSS 실수집 → 출처 3단계 + 키워드 필터 → (통과분) LLM 분석.
 """
 from __future__ import annotations
 

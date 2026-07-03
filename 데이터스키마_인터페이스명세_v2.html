@@ -167,7 +167,7 @@
         <tr><td><code>risk_score</code></td><td>하방·위험 강도</td></tr>
         <tr><td><code>confidence</code></td><td>신뢰도</td></tr>
         <tr><td><code>source_trust</code></td><td>(뉴스) 출처 신뢰도(LLM)</td></tr>
-        <tr><td><code>grade_score</code></td><td>(뉴스) 출처 등급 ALLOW1·GRAY.6·WATCH.3·BLOCK0</td></tr>
+        <tr><td><code>grade_score</code></td><td>(뉴스) 출처 등급 ALLOW1·GRAY.6·BLOCK0</td></tr>
         <tr><td><code>confirmed_score</code></td><td>확정도. 공시 1.0 / 뉴스 확정비율</td></tr>
         <tr><td>bool 플래그</td><td>has_signal·hard_block → <b>0/1 정수</b></td></tr>
       </table>
@@ -250,7 +250,7 @@
     risk_score: float               <span class="c-good"># 0~1</span>
     confidence: float               <span class="c-good"># 0~1</span>
     source_trust: float             <span class="c-good"># 0~1 (LLM 판단)</span>
-    grade_score: float              <span class="c-good"># 0~1 (출처등급 ALLOW1·GRAY.6·WATCH.3·BLOCK0)</span>
+    grade_score: float              <span class="c-good"># 0~1 (출처등급 ALLOW1·GRAY.6·BLOCK0)</span>
     confirmed_score: float          <span class="c-good"># 0~1 (확정 비율)</span>
     fact_check: str                 <span class="c-str"># ★ 팩트체크 한 문장(Verified/Unverified…)</span>
     hard_block: int                 <span class="c-com"># 0/1</span>
@@ -269,7 +269,7 @@
     <tr><td><code>importance</code></td><td class="range">0~1</td><td>신뢰가중 평균 강도</td></tr>
     <tr><td><code>peak_importance</code></td><td class="range">0~1</td><td>집계 전 최고 잠재. "잠재 큰데 저신뢰라 눌린" 경우 병기</td></tr>
     <tr><td><code>source_trust</code></td><td class="range">0~1</td><td>(뉴스 전용) 출처 신뢰도(LLM). 소셜·루머 방어</td></tr>
-    <tr><td><code>grade_score</code></td><td class="range">0~1</td><td>출처 <b>정책등급</b> 점수. ALLOW1·GRAY.6·WATCH.3·BLOCK0 (신뢰가중)</td></tr>
+    <tr><td><code>grade_score</code></td><td class="range">0~1</td><td>출처 <b>정책등급</b> 점수. ALLOW1·GRAY.6·BLOCK0 (신뢰가중, 소셜=GRAY)</td></tr>
     <tr><td><code>confirmed_score</code></td><td class="range">0~1</td><td>확정 비율 = 확정건수 / 전체</td></tr>
     <tr><td><code>fact_check</code>·<code>created_at</code></td><td class="range">str</td><td>팩트체크 한 문장(확정→<code>Verified</code>·루머→<code>Unverified (rumor)</code>)·레코드 생성시각(<b>초 포함</b>)</td></tr>
     <tr><td><code>top_evidence</code></td><td class="range">list</td><td>대표 근거 헤드라인(나머지는 DB)</td></tr>

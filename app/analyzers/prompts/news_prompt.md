@@ -7,8 +7,8 @@
 - reasoning: 헤드라인의 핵심 사실을 먼저 단계적으로 추론한 뒤 결론.
 - is_confirmed: "발표/공시/계약 체결" 같은 확정이면 True. "~알려져/전망/소문/
   reportedly/sources say"면 False(추측).
-- source_trust: 입력에 주어진 출처 등급(ALLOW/GRAY/WATCH_ONLY)과 본문 톤을 함께
-  반영한 0~1 신뢰도. 소셜 단독·추측성은 낮게.
+- source_trust: 입력에 주어진 출처 등급(ALLOW/GRAY)과 본문 톤을 함께
+  반영한 0~1 신뢰도. 소셜(=GRAY)·추측성은 낮게.
 - certainty_level: 단정적이면 High, 모호/추측이면 Low.
 - importance: 1~5일 주가 영향. 자사주매입·M&A확정=7~9, 단순 제품/애널 등급=4~5.
 - trade_permission: 보수적으로. 미확인(is_confirmed=False)·소셜 단독·이미 급등은

@@ -1,7 +1,7 @@
 """
 뉴스 출처 정책 + 입력 키워드 필터 (LLM 호출 전 단계).
 
-- classify_source(url) → ALLOW / GRAY / WATCH_ONLY / BLOCK
+- classify_source(url) → ALLOW / GRAY / BLOCK  (WATCH_ONLY 소셜 등급은 제거 — 팀 결정)
 - keyword_screen(text) → (verdict, hit)  pass/whitelist/drop
   화이트리스트가 블랙리스트보다 우선(false negative 방지).
 """
@@ -18,7 +18,7 @@ _CFG_DIR = Path(__file__).resolve().parents[2] / "config"
 _TRUST = _CFG_DIR / "news_trust_policy.yaml"
 _KEYWORD = _CFG_DIR / "news_keyword_filter.yaml"
 
-SourcePolicy = Literal["ALLOW", "GRAY", "WATCH_ONLY", "BLOCK"]
+SourcePolicy = Literal["ALLOW", "GRAY", "BLOCK"]
 
 
 @lru_cache(maxsize=1)
@@ -39,11 +39,11 @@ def classify_source(url: str | None) -> SourcePolicy:
         return "GRAY"
     low = url.lower()
     policy = _trust_cfg()["source_policy"]
-    for grade in ("ALLOW", "GRAY", "WATCH_ONLY"):
+    for grade in ("ALLOW", "GRAY"):
         for domain in policy.get(grade, []):
             if domain in low:
                 return grade  # type: ignore[return-value]
-    return "GRAY"
+    return "GRAY"   # 미등록(소셜 포함)은 보수적 기본 GRAY
 
 
 @dataclass

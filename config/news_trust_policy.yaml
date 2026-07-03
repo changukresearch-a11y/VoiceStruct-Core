@@ -1,6 +1,7 @@
-# 뉴스 출처 신뢰도 4단계 정책 (V2).
+# 뉴스 출처 신뢰도 3단계 정책 (V2, WATCH_ONLY 소셜 등급 제거 — 팀 결정 2026-07-03).
 # 핵심: ALLOW ≠ 매수허용. ALLOW는 '분석 반영 가능'일 뿐,
 # 최종 매수는 시장반응·리스크 필터를 추가로 통과해야 한다.
+# 미등록 도메인(소셜 x/reddit/stocktwits 등 포함)은 코드에서 보수적 기본 GRAY로 분류.
 
 source_policy:
   ALLOW:        # 공식·1급 매체 — 점수 반영 가능
@@ -30,15 +31,7 @@ source_policy:
     - thestreet.com
     - tipranks.com
 
-  WATCH_ONLY:   # 소셜 — 조기 감지 전용, 자동매수 금지
-    - x.com
-    - twitter.com
-    - reddit.com
-    - stocktwits.com
-    - youtube.com
-    - telegram.org
-    - discord.com
-    - substack.com
+# (WATCH_ONLY 소셜 등급 제거 — 소셜/미등록 도메인은 코드 기본값 GRAY로 처리)
 
 # 본문/메타에서 아래 조건이면 BLOCK (분석 제외)
 block_conditions:
