@@ -162,7 +162,7 @@
       <h3 style="margin-top:0">2-2. 점수 규약 <span class="range">float 0.0~1.0</span></h3>
       <table style="margin-top:4px">
         <tr><td>정규화</td><td>내부 0~10 → <code>/10</code> → 0~1 (소수 2자리)</td></tr>
-        <tr><td><code>sentiment_score</code></td><td>방향×강도 <span class="range">0~1</span>. 0.5=중립</td></tr>
+        <tr><td><code>sentiment_score</code></td><td>방향×강도 <span class="range">0~1</span>. 0.5=중립. <b>호재만 conf 감쇠·악재 유지</b>(비대칭)</td></tr>
         <tr><td><code>importance</code></td><td>강도만·부호 없음 (상폐≈1.0)</td></tr>
         <tr><td><code>risk_score</code></td><td>하방·위험 강도</td></tr>
         <tr><td><code>confidence</code></td><td>신뢰도</td></tr>
@@ -195,7 +195,9 @@
     company_name: str | None
     category: str | None            <span class="c-com"># 스크리닝 에이전트가 전달</span>
     as_of: str
+    created_at: str                 <span class="c-str"># ★ 레코드 생성시각(초, DB생성일)</span>
     has_signal: int                 <span class="c-com"># 0/1 (분석된 공시 신호 유무)</span>
+    filing_title; filing_no; filed_at <span class="c-str"># ★ 공시 제목·번호·업로드일시(초 포함)</span>
     event_type: str                 <span class="c-com"># 통일 11종</span>
     sentiment: str                  <span class="c-com"># 방향 라벨(파생)</span>
     sentiment_score: float          <span class="c-str"># 0~1: 0=악재·0.5=중립·1=호재</span>
@@ -203,19 +205,26 @@
     risk_score: float               <span class="c-good"># 0~1</span>
     confidence: float               <span class="c-good"># 0~1</span>
     confirmed_score: float          <span class="c-good"># 0~1 (공시=1.0 도장 찍힌 사실)</span>
+    fact_check: str                 <span class="c-str"># ★ 팩트체크 한 문장(Verified — official SEC filing)</span>
     hard_block: int                 <span class="c-bad"># 0/1 상폐·going concern → 매수 override</span>
     hard_block_reason: str | None
     reason: str
+    verdict: str                    <span class="c-str"># ★ 검증결과 한 문장(호재/악재 판단)</span>
+    summary: str                    <span class="c-str"># ★ 공시 전문 3~4줄 요약</span>
+    keywords: list[str]             <span class="c-str"># ★ 핵심 키워드 5개</span>
     ref: str                        <span class="c-com"># accession_no 또는 url</span></pre>
 
   <table>
     <tr><th>필드</th><th>범위</th><th>의미 · 근거</th></tr>
+    <tr><td><code>filing_title</code>·<code>filing_no</code>·<code>filed_at</code></td><td class="range">str</td><td>공시 제목·번호(accession)·업로드 일시(<b>초 포함</b>, acceptanceDateTime 우선)</td></tr>
     <tr><td><code>sentiment_score</code></td><td class="range">0~1</td><td>방향 점수. 0=강악재·0.5=중립·1=강호재</td></tr>
     <tr><td><code>importance</code></td><td class="range">0~1</td><td>강도만. 1~5일 스윙 영향. 거래정지·상폐≈1.0, 대형 M&A·실적쇼크 0.8~0.9</td></tr>
     <tr><td><code>risk_score</code></td><td class="range">0~1</td><td>하방 위험. 회계·희석·상폐일수록 ↑</td></tr>
     <tr><td><code>confidence</code></td><td class="range">0~1</td><td><code>certainty_level</code> 수치화 (High=0.9/Med=0.6/Low=0.3)</td></tr>
     <tr><td><code>confirmed_score</code></td><td class="range">0~1</td><td>확정도. 공시는 법적 의무 제출 → <b>1.0</b></td></tr>
+    <tr><td><code>fact_check</code>·<code>created_at</code></td><td class="range">str</td><td>팩트체크 한 문장(공시=<code>Verified — official SEC filing</code>)·레코드 생성시각(<b>초 포함</b>, DB생성일)</td></tr>
     <tr><td><code>hard_block</code></td><td class="range">0/1</td><td>상폐·거래정지·going concern → 매수 override. <b>sentiment에 안 녹이고 별도 플래그</b></td></tr>
+    <tr><td><code>verdict</code>·<code>summary</code>·<code>keywords</code></td><td class="range">str·str·list</td><td>★ 검증결과 한 문장(호재/악재)·전문 3~4줄 요약·키워드 5개. 원문 근거만(환각 방지)</td></tr>
     <tr><td><code>ref</code></td><td class="range">str</td><td>감사추적·백테스트 replay용 accession/링크</td></tr>
   </table>
 </section>
@@ -227,7 +236,9 @@
 
   <pre><span class="c-key">class</span> NewsBundle:
     ticker, company_name, category, as_of      <span class="c-com"># 종목 식별(공통)</span>
+    created_at: str                 <span class="c-str"># ★ 레코드 생성시각(초, DB생성일)</span>
     has_signal: int                 <span class="c-com"># 0/1</span>
+    news_title; source; published_at <span class="c-str"># ★ 대표기사 제목·언론사·업로드일시(초 포함)</span>
     news_count: int                 <span class="c-com"># 분석된 뉴스 총 건수</span>
     news_confirmed: int             <span class="c-com"># 확정 사실 건수</span>
     news_rumor: int                 <span class="c-com"># 루머/추측 건수</span>
@@ -241,21 +252,28 @@
     source_trust: float             <span class="c-good"># 0~1 (LLM 판단)</span>
     grade_score: float              <span class="c-good"># 0~1 (출처등급 ALLOW1·GRAY.6·WATCH.3·BLOCK0)</span>
     confirmed_score: float          <span class="c-good"># 0~1 (확정 비율)</span>
+    fact_check: str                 <span class="c-str"># ★ 팩트체크 한 문장(Verified/Unverified…)</span>
     hard_block: int                 <span class="c-com"># 0/1</span>
     hard_block_reason: str | None
     top_evidence: list[str]
     reason: str
+    verdict: str                    <span class="c-str"># ★ 검증결과 한 문장(호재/악재, 대표 기사)</span>
+    summary: str                    <span class="c-str"># ★ 뉴스 전문 3~4줄 요약(대표 기사)</span>
+    keywords: list[str]             <span class="c-str"># ★ 핵심 키워드 5개</span>
     ref: str</pre>
 
   <table>
     <tr><th>필드</th><th>범위</th><th>의미 · 근거</th></tr>
     <tr><td><code>news_count/confirmed/rumor</code></td><td class="range">int</td><td>건수 분해. "확정 여럿=신뢰↑, 한 곳뿐=루머 의심"</td></tr>
+    <tr><td><code>news_title</code>·<code>source</code>·<code>published_at</code></td><td class="range">str</td><td><b>대표 기사</b>의 제목·출처 언론사·업로드 일시(<b>초 포함</b>)</td></tr>
     <tr><td><code>importance</code></td><td class="range">0~1</td><td>신뢰가중 평균 강도</td></tr>
     <tr><td><code>peak_importance</code></td><td class="range">0~1</td><td>집계 전 최고 잠재. "잠재 큰데 저신뢰라 눌린" 경우 병기</td></tr>
     <tr><td><code>source_trust</code></td><td class="range">0~1</td><td>(뉴스 전용) 출처 신뢰도(LLM). 소셜·루머 방어</td></tr>
     <tr><td><code>grade_score</code></td><td class="range">0~1</td><td>출처 <b>정책등급</b> 점수. ALLOW1·GRAY.6·WATCH.3·BLOCK0 (신뢰가중)</td></tr>
     <tr><td><code>confirmed_score</code></td><td class="range">0~1</td><td>확정 비율 = 확정건수 / 전체</td></tr>
+    <tr><td><code>fact_check</code>·<code>created_at</code></td><td class="range">str</td><td>팩트체크 한 문장(확정→<code>Verified</code>·루머→<code>Unverified (rumor)</code>)·레코드 생성시각(<b>초 포함</b>)</td></tr>
     <tr><td><code>top_evidence</code></td><td class="range">list</td><td>대표 근거 헤드라인(나머지는 DB)</td></tr>
+    <tr><td><code>verdict</code>·<code>summary</code>·<code>keywords</code></td><td class="range">str·str·list</td><td>★ <b>대표 기사</b>(신뢰가중 선정)의 호재/악재 판정·전문 3~4줄 요약·키워드 5개</td></tr>
   </table>
 </section>
 
@@ -265,41 +283,70 @@
   <div class="card">
     <table style="margin-top:4px">
       <tr><td>방향/강도</td><td>신뢰가중. 단 강한 악재(signed ≤ −0.7)면 보수적으로 그쪽</td></tr>
-      <tr><td><code>importance</code></td><td>신뢰가중 평균(방향 뺀 크기)</td></tr>
+      <tr><td><code>sentiment_score</code></td><td>방향×강도를 0~1로. <b>호재만 conf 감쇠·악재 유지</b>(비대칭)</td></tr>
+      <tr><td><code>importance</code></td><td>신뢰가중 평균(방향 뺀 크기, 감쇠 없음)</td></tr>
       <tr><td><code>confidence</code></td><td>certainty × is_confirmed × source_trust 평균</td></tr>
+      <tr><td><b>대표 선정</b></td><td><code>importance × confidence</code>(신뢰가중) 최대 기사로 — 루머가 헤드라인 안 되게</td></tr>
       <tr><td><code>hard_block</code></td><td>어느 뉴스든 BLOCK류면 1</td></tr>
     </table>
+  </div>
+  <div class="callout">
+    <div class="co-t">산출 고도화 근거</div>
+    ① 방향점수는 <b>낙관만 신뢰로 깎고 악재는 유지</b> — 과신·펌프엔 보수적, 경고는 안 흐림("틀려도 작게 잃기").
+    ② 대표는 <b>가장 시끄러운 것(importance)이 아니라 가장 믿을 만하며 중요한 것(importance×confidence)</b>을 뽑아 미확정 루머가 헤드라인이 되는 걸 막는다.
   </div>
 </section>
 
 <!-- 6 -->
 <section id="s6">
   <h2><span class="num">6</span> 전달 샘플 — JSON(정식) · <code>to_prompt()</code>(보조)</h2>
-  <p class="section-sub">Strategist에는 <b>JSON을 정식 전달</b>. <code>to_prompt()</code>는 사람이 읽는 보조 텍스트(같은 객체 두 표현).</p>
+  <p class="section-sub">Strategist에는 <b>JSON을 정식 전달</b>. <code>to_prompt()</code>는 보조 텍스트(같은 객체 두 표현).
+  <b>⚙️ 출력 언어=영어</b> — 자유서술(summary·verdict·reason)과 to_prompt 라벨은 전부 영어(전략가 에이전트가 읽음). enum·점수는 공통.</p>
 
-  <pre>[NVDA · NVIDIA CORP · 반도체] 공시 as_of 2026-07-02
- 공시: ma / <span class="c-good">positive(0.9)</span> 중요도<span class="c-str">0.8</span> 위험<span class="c-str">0.3</span> conf<span class="c-str">0.9</span> 확정<span class="c-str">1.0</span>
-       "대형 인수 발표(프리미엄 30%)"
- 종합: hard_block=<span class="c-good">0</span></pre>
+  <pre>[NVDA · NVIDIA CORP · Semiconductors] Disclosure as_of 2026-07-02
+ Disclosure: ma / <span class="c-good">positive(0.86)</span> imp<span class="c-str">0.8</span> risk<span class="c-str">0.3</span> conf<span class="c-str">0.9</span> confirmed<span class="c-str">1.0</span>
+       Filing: "NVDA 8-K — Item 1.01 Entry into Material Agreement" · No 0001045810-26-000123 · filed 2026-07-02T16:30:12.000Z
+       Fact-check: <span class="c-good">Verified</span> — official SEC filing (legally binding fact).
+       Verdict: <span class="c-good">Bullish</span> — large all-cash acquisition, near-term upside likely (high trust).
+       Summary: Acquirer to buy Target for 35% cash premium. Deal size $10B. Regulatory approval pending.
+       Keywords: acquisition, 35% premium, all-cash, regulatory approval, large M&A
+       Reason: "Large acquisition announced (30% premium)"
+ Overall: hard_block=<span class="c-good">0</span> · generated 2026-07-02T16:31:05+00:00</pre>
 
-  <pre>[NVDA · NVIDIA CORP · 반도체] 뉴스 as_of 2026-07-02
- 뉴스: 3건(확정2·루머1) → <span class="c-good">positive(0.84)</span> 중요도0.67 신뢰0.88 등급<span class="c-str">0.95</span> conf0.6 [최고imp0.8·저신뢰]
-       "reuters.com: Nvidia earnings beat expectations Q2"
- 종합: hard_block=<span class="c-good">0</span></pre>
+  <pre>[NVDA · NVIDIA CORP · Semiconductors] News as_of 2026-07-02
+ News: 3 items (confirmed2·rumor1) → <span class="c-good">positive(0.84)</span> imp0.67 trust0.88 grade<span class="c-str">0.95</span> conf0.6 [peak imp0.8·low-conf]
+       Source: reuters.com · published 2026-07-02T14:30:05+00:00
+       Fact-check: <span class="c-good">Verified</span> — 2/3 confirmed, trust 0.88, grade 0.95.
+       Verdict: <span class="c-good">Bullish</span> — confirmed earnings surprise, upside expected.
+       Summary: Q2 results beat consensus. Revenue +22% YoY. Guidance raised.
+       Keywords: earnings, surprise, revenue +22%, guidance raised, semiconductors
+       Evidence: "reuters.com: Nvidia earnings beat expectations Q2"
+ Overall: hard_block=<span class="c-good">0</span> · generated 2026-07-02T16:31:05+00:00</pre>
 
   <pre><span class="c-com"># 정식 계약 = JSON (뉴스 예)</span>
 {
   <span class="c-key">"ticker"</span>: "NVDA", <span class="c-key">"company_name"</span>: "NVIDIA CORP", <span class="c-key">"category"</span>: "반도체",
-  <span class="c-key">"has_signal"</span>: 1, <span class="c-key">"news_count"</span>: 3, <span class="c-key">"news_confirmed"</span>: 2, <span class="c-key">"news_rumor"</span>: 1,
+  <span class="c-key">"has_signal"</span>: 1, <span class="c-key">"news_title"</span>: "Nvidia earnings beat expectations Q2", <span class="c-key">"source"</span>: "reuters.com", <span class="c-key">"published_at"</span>: "2026-07-02T14:30:05+00:00",
+  <span class="c-key">"news_count"</span>: 3, <span class="c-key">"news_confirmed"</span>: 2, <span class="c-key">"news_rumor"</span>: 1,
   <span class="c-key">"sentiment"</span>: "positive", <span class="c-key">"sentiment_score"</span>: 0.84, <span class="c-key">"importance"</span>: 0.67,
   <span class="c-key">"risk_score"</span>: 0.22, <span class="c-key">"confidence"</span>: 0.6, <span class="c-key">"source_trust"</span>: 0.88,
-  <span class="c-key">"grade_score"</span>: 0.95, <span class="c-key">"confirmed_score"</span>: 0.67, <span class="c-key">"hard_block"</span>: 0
+  <span class="c-key">"grade_score"</span>: 0.95, <span class="c-key">"confirmed_score"</span>: 0.67,
+  <span class="c-key">"fact_check"</span>: "Verified — 2/3 confirmed, trust 0.88, grade 0.95.",
+  <span class="c-key">"created_at"</span>: "2026-07-02T14:31:00+00:00", <span class="c-key">"hard_block"</span>: 0,
+  <span class="c-key">"verdict"</span>: "Bullish — confirmed earnings surprise, upside expected.",
+  <span class="c-key">"summary"</span>: "Q2 results beat consensus. Revenue +22% YoY. Guidance raised.",
+  <span class="c-key">"keywords"</span>: ["earnings", "surprise", "revenue +22%", "guidance raised", "semiconductors"]
 }</pre>
 
-  <pre>[XYZ · Example Corp · 바이오] 공시 as_of 2026-07-02
- 공시: delisting_halt / <span class="c-bad">negative(0.05)</span> 중요도0.9 위험0.95 conf0.9 확정
-       "10-Q 본문에 going concern(계속기업 불확실성)"
- 종합: <span class="c-bad">hard_block=1 (going concern)</span>   ← 매수금지 override</pre>
+  <pre>[XYZ · Example Corp · Biotech] Disclosure as_of 2026-07-02
+ Disclosure: delisting_halt / <span class="c-bad">negative(0.05)</span> imp0.9 risk0.95 conf0.9 confirmed1.0
+       Filing: "XYZ 10-Q — Q2 2026" · No 0001-24-000123 · filed 2026-07-02T16:30:12.000Z
+       Fact-check: <span class="c-bad">Verified</span> — official SEC filing (legally binding fact).
+       Verdict: <span class="c-bad">Bearish</span> — going concern flagged, buy blocked.
+       Summary: 10-Q notes going concern doubt. Auditor caveat. Liquidity risk.
+       Keywords: going concern, delisting, liquidity, auditor, 10-Q
+       Reason: "Going concern language in 10-Q filing"
+ Overall: <span class="c-bad">hard_block=1 (going concern)</span> · generated 2026-07-02T16:31:05+00:00   ← 매수금지 override</pre>
 </section>
 
 <!-- 7 -->

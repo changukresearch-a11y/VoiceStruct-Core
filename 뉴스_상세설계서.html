@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quantinue · 뉴스(News) 분석 — 상세 설계서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f8fafc; --panel:#ffffff; --line:#e2e8f0; --line2:#f1f5f9;
+    --txt:#334155; --head:#0f172a; --dim:#64748b;
+    --green:#15803d; --green-d:#14532d; --green-bg:#f0fdf4;
+    --blue:#1d4ed8; --blue-d:#1e3a8a; --blue-bg:#eff6ff;
+    --amber:#b45309; --amber-d:#92400e; --amber-bg:#fffbeb;
+    --rose:#be123c; --rose-bg:#fff1f2;
+    --violet:#7c3aed; --violet-bg:#f5f3ff; --slate:#475569; --slate-bg:#f1f5f9;
+    --teal:#0e7490; --teal-d:#155e75; --teal-bg:#ecfeff;
+    --sidebar:290px;
+  }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0; font-family:"Noto Sans KR",system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--txt); line-height:1.75; letter-spacing:-.01em; font-size:15px;}
+  a{color:var(--teal); text-decoration:none} a:hover{text-decoration:underline}
+  .layout{display:flex; align-items:flex-start}
+  aside.sidebar{width:var(--sidebar); flex:0 0 var(--sidebar); position:sticky; top:0; height:100vh; overflow-y:auto; background:#fff; border-right:1px solid var(--line); padding:24px 16px;}
+  .sidebar .brand{display:flex; align-items:center; gap:10px; margin-bottom:4px}
+  .sidebar .brand .e{font-size:24px} .sidebar .brand b{font-size:16px; color:var(--head)}
+  .sidebar .sub{color:var(--dim); font-size:12px; margin:0 0 18px; line-height:1.5}
+  .sidebar nav a{display:block; color:var(--dim); font-size:13px; padding:6px 11px; border-radius:8px; margin:1px 0; border-left:2px solid transparent; transition:.12s;}
+  .sidebar nav a:hover{background:var(--teal-bg); color:var(--teal-d)}
+  .sidebar .foot{margin-top:20px; padding-top:14px; border-top:1px solid var(--line); color:var(--dim); font-size:11px; line-height:1.6}
+  main.content{flex:1 1 auto; min-width:0; max-width:940px; margin:0 auto; padding:0 36px 120px}
+  .hero{padding:52px 10px 26px; border-bottom:1px solid var(--line); background:radial-gradient(900px 300px at 30% -20%,rgba(14,116,144,.10),transparent)}
+  .hero .emoji{font-size:46px}
+  .hero h1{font-size:clamp(24px,5vw,34px); margin:8px 0 4px; font-weight:800; color:var(--head)}
+  .hero .tag{color:var(--dim); font-size:15px; margin:4px 0}
+  .badges{margin-top:16px; display:flex; gap:7px; flex-wrap:wrap}
+  .badge{background:var(--panel); border:1px solid var(--line); padding:4px 12px; border-radius:999px; font-size:12px; color:var(--dim); font-weight:500}
+  section{scroll-margin-top:18px}
+  h2{font-size:22px; margin:52px 0 6px; font-weight:800; display:flex; align-items:center; gap:11px; color:var(--head)}
+  h2 .n{font-size:13px; color:#fff; background:var(--teal); border-radius:8px; padding:3px 10px; font-weight:800; flex:none}
+  h3{font-size:16.5px; margin:26px 0 6px; color:var(--head); font-weight:700}
+  h4{font-size:14.5px; margin:14px 0 2px; color:var(--teal-d); font-weight:700}
+  .lead{color:var(--dim); font-size:16px; margin:4px 0 0}
+  p{margin:10px 0} ul,ol{margin:10px 0; padding-left:22px} li{margin:5px 0}
+  strong,b{color:var(--head)}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin:16px 0; box-shadow:0 1px 2px rgba(15,23,42,.03)}
+  .card.hl{border-color:var(--teal)}
+  .callout{border-radius:12px; padding:13px 16px; margin:14px 0; border:1px solid; font-size:14.5px}
+  .c-tip{background:var(--green-bg); border-color:#bbf7d0}
+  .c-warn{background:var(--amber-bg); border-color:#fde68a}
+  .c-info{background:var(--blue-bg); border-color:#bfdbfe}
+  .c-danger{background:var(--rose-bg); border-color:#fecdd3}
+  .callout b{color:var(--head)}
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:13px; border:1px solid var(--line); border-radius:12px; overflow:hidden}
+  th,td{padding:9px 11px; text-align:left; border-bottom:1px solid var(--line2); vertical-align:top}
+  th{background:#f1f5f9; color:var(--head); font-weight:700}
+  tr:last-child td{border-bottom:none} tbody tr:nth-child(even){background:#fcfdfe}
+  code{background:#f1f5f9; border:1px solid var(--line); padding:1px 6px; border-radius:5px; font-size:.88em; color:#9a3412; font-family:"SF Mono",Menlo,Consolas,monospace}
+  pre{background:#0f172a; border-radius:12px; padding:15px 17px; overflow-x:auto; font-size:12.6px; line-height:1.6; margin:12px 0}
+  pre code{background:none; border:none; padding:0; color:#e2e8f0}
+  .spec{margin:10px 0; font-size:14px} .spec b{color:var(--head)}
+  .t{display:inline-block; padding:2px 10px; border-radius:6px; font-size:11.5px; font-weight:800; margin-right:6px}
+  .t-agent{background:var(--violet-bg); color:var(--violet); border:1px solid #ddd6fe}
+  .t-ml{background:var(--amber-bg); color:var(--amber-d); border:1px solid #fde68a}
+  .t-rule{background:var(--blue-bg); color:var(--blue-d); border:1px solid #bfdbfe}
+  .t-data{background:var(--green-bg); color:var(--green-d); border:1px solid #bbf7d0}
+  .t-code{background:var(--slate-bg); color:var(--slate); border:1px solid var(--line)}
+  .perm{display:inline-block; padding:2px 9px; border-radius:6px; font-size:11px; font-weight:800; font-family:"SF Mono",Menlo,Consolas,monospace}
+  .g1{background:#dcfce7; color:#14532d} .g2{background:#fef9c3; color:#854d0e}
+  .g3{background:#f1f5f9; color:#475569} .g4{background:#ffe4e6; color:#9f1239}
+  .menu-btn{display:none}
+  .divider{height:1px; background:var(--line); margin:22px 0}
+  @media(max-width:880px){
+    aside.sidebar{position:fixed; left:0; top:0; z-index:50; height:100vh; width:265px; transform:translateX(-100%); transition:transform .25s; box-shadow:0 0 40px rgba(15,23,42,.18);}
+    body.nav-open aside.sidebar{transform:translateX(0)}
+    main.content{padding:0 18px 100px}
+    .menu-btn{display:flex; align-items:center; gap:8px; position:fixed; top:14px; left:14px; z-index:40; background:var(--panel); border:1px solid var(--line); color:var(--head); border-radius:10px; padding:9px 14px; font-size:14px; cursor:pointer; box-shadow:0 2px 8px rgba(15,23,42,.08);}
+    .scrim{display:none; position:fixed; inset:0; background:rgba(15,23,42,.35); z-index:45}
+    body.nav-open .scrim{display:block}
+    .hero{padding-top:58px}
+  }
+</style>
+</head>
+<body>
+<button class="menu-btn" onclick="document.body.classList.toggle('nav-open')">☰ 목차</button>
+<div class="scrim" onclick="document.body.classList.remove('nav-open')"></div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand"><span class="e">📰</span><b>뉴스 분석</b></div>
+    <p class="sub">News Agent · 상세 설계서<br>정보분석 파트 ② · collector-agent</p>
+    <nav>
+      <a href="#s1">01 · 왜 뉴스인가</a>
+      <a href="#s2">02 · 수집 (Google News RSS)</a>
+      <a href="#s3">03 · 사전필터(출처+키워드)</a>
+      <a href="#s4">04 · NewsSignal 스키마</a>
+      <a href="#s5">05 · 다층 방어</a>
+      <a href="#s6">06 · 여러 건 → 대표 1개</a>
+      <a href="#s7">07 · 매매권한·시점 함정</a>
+      <a href="#s8">08 · 산출물 NewsBundle</a>
+      <a href="#s9">09 · 역할 경계</a>
+    </nav>
+    <div class="foot">Python · Pydantic AI · Google News RSS<br>LLM = OpenAI gpt-4o-mini · 키 불필요(RSS)</div>
+  </aside>
+
+  <main class="content">
+  <div class="hero">
+    <div class="emoji">📰</div>
+    <h1><span class="t t-agent">에이전트</span> 뉴스(News) 분석</h1>
+    <p class="tag">공시에 없는 정보(애널리스트 의견·외신·업계 루머)를 잡되, <b>루머·찌라시·펌프</b>가 섞여 있어 <b>신뢰도·사실성 판정</b>이 핵심이다. 다층 방어로 노이즈를 거른다.</p>
+    <div class="badges">
+      <span class="badge">Google News RSS (키 불필요)</span>
+      <span class="badge">사전필터로 LLM 전 차단</span>
+      <span class="badge">출처 4단계 + 키워드</span>
+      <span class="badge">is_confirmed · source_trust</span>
+      <span class="badge">출력 NewsBundle (0~1)</span>
+    </div>
+  </div>
+
+  <!-- 1 -->
+  <section id="s1">
+    <h2><span class="n">01</span> 왜 뉴스인가 — 공시보다 빠르지만 노이즈</h2>
+    <p class="lead">뉴스는 공시에 없는 정보(애널리스트 의견·외신·업계 루머)도 다루고, 큰 사건은 <b>공식 공시 전에 언론이 먼저 보도</b>하기도 한다(예: "A사 인수 추진 중인 것으로 알려져" → 며칠 뒤 공시). 즉 공시와 <b>다른 정보원</b>이라 더 빠르고 폭넓게 분위기를 잡는다.</p>
+    <div class="callout c-warn">⚠️ <b>대신 노이즈·추측이 많아</b> 공시로 사실 확인이 필요하다. 문맥·뉘앙스는 LLM이 호재/악재/테마로 해석한다. <b>뉴스 = 신뢰도 필터가 전부.</b></div>
+    <div class="callout c-tip">🍳 <b>쉽게 말하면</b> — 공시가 "도장 찍힌 서류"라면, 뉴스는 "빠르지만 진위가 섞인 소문·보도". 그래서 뉴스는 <b>"이거 진짜야?"를 여러 겹으로 검증</b>하는 게 일의 핵심이다.</div>
+  </section>
+
+  <!-- 2 -->
+  <section id="s2">
+    <h2><span class="n">02</span> 수집 — Google News RSS</h2>
+    <div class="spec"><b>키 불필요</b> — 종목명/티커로 Google News RSS를 실수집한다. API 키가 없어도 되고, RSS의 <code>&lt;source&gt;</code> 태그로 출처(Reuters·Bloomberg 등)를 분류한다.</div>
+    <div class="spec"><b>기사별 유니크 키</b> — dedup(중복 제거) 키는 <code>google_link</code>(RSS <code>&lt;link&gt;</code>, 기사별 유니크)를 쓴다. <code>url</code>은 출처 도메인이라 같은 언론사 기사가 뭉개지므로 쓰지 않는다.</div>
+    <div class="callout c-info">💡 <b>DB 기반 dedup</b> — <code>news_signals</code> 테이블에 <code>news_key UNIQUE</code> + <code>INSERT OR IGNORE</code>로, 스케줄러가 재시작해도 이미 본 기사는 재분석·재LLM 하지 않는다. 드롭된 뉴스도 "본 것"으로 저장한다.</div>
+  </section>
+
+  <!-- 3 -->
+  <section id="s3">
+    <h2><span class="n">03</span> 사전 필터 — LLM 호출 전 조기 종료</h2>
+    <p>수집한 기사는 LLM에 가기 <b>전에</b> 출처 등급과 키워드 두 관문을 통과해야 한다. 여기서 걸리면 LLM 비용을 아예 쓰지 않는다(비용↓ + 정확도↑).</p>
+
+    <h3>3-1. 출처 4단계 정책</h3>
+    <table>
+      <tr><th>등급</th><th>출처 예시</th><th>취급</th></tr>
+      <tr><td><span class="perm g1">ALLOW</span></td><td>SEC·Reuters·Bloomberg·WSJ·CNBC</td><td>분석 반영</td></tr>
+      <tr><td><span class="perm g2">GRAY</span></td><td>Benzinga·SeekingAlpha·Zacks</td><td>단독 매수금지</td></tr>
+      <tr><td><span class="perm g3">WATCH</span></td><td>X·Reddit·Stocktwits</td><td>조기감지만</td></tr>
+      <tr><td><span class="perm g4">BLOCK</span></td><td>광고·리딩방·AI SEO 복붙</td><td>즉시 drop</td></tr>
+    </table>
+    <div class="callout c-warn">⚠️ <b>ALLOW ≠ 매수허용.</b> 분석에 반영 가능하다는 뜻일 뿐, 시장반응·리스크 필터를 더 통과해야 한다.</div>
+
+    <h3>3-2. 키워드 필터 (화이트 우선)</h3>
+    <ul>
+      <li><b>whitelist</b> 우선 통과 — false negative 방지</li>
+      <li><b>blacklist</b> 매치 → <span class="perm g3">drop</span> (WATCH_ONLY로 종료)</li>
+      <li>둘 다 없으면 <b>pass</b> → LLM으로</li>
+    </ul>
+    <pre><code># 사전필터 통과 못 하면 LLM 스킵:
+출처 == BLOCK  → BLOCK_BUY,   LLM 스킵
+키워드 == drop → WATCH_ONLY,  LLM 스킵</code></pre>
+  </section>
+
+  <!-- 4 -->
+  <section id="s4">
+    <h2><span class="n">04</span> NewsSignal — LLM 출력 스키마 (공시와 별도)</h2>
+    <p>뉴스 전용으로 <b>사실/루머 구분과 출처 신뢰도</b> 필드를 추가로 둔다. 추론 강제(reasoning→certainty)는 공시와 동일 사상.</p>
+    <pre><code>class NewsSignal:
+    reasoning; certainty_level     # 공시와 동일 추론 강제(CoT + 모호성)
+    event_type; sentiment          # 통일 11종 · pos/neg/neutral/mixed
+    importance: int (0~10)
+    risk_score: float (0~10)
+    is_confirmed: bool             # ★ 확정 사실인가? '~알려져/전망/소문'=False
+    source_trust: float (0~1)      # ★ 출처 신뢰도(정책 등급 + 본문 톤)
+    theme: list                    # 테마/섹터 태그
+    hard_risk_flag; trade_permission
+    reason; evidence_quotes        # 한 줄 근거 · 원문 인용(환각 방지)
+    summary: str                   # ★ 뉴스 전문 3~4줄 요약
+    keywords: list                 # ★ 핵심 키워드 5개
+    verdict: str                   # ★ 검증 결과 한 문장(맨 앞 호재/악재/중립)</code></pre>
+    <div class="callout c-info">💡 <b>요약·키워드·판정 (신규)</b> — 점수와 별개로 <b>전문 3~4줄 요약</b>·<b>키워드 5개</b>·<b>호재/악재 판정 한 문장</b>을 함께 낸다. 뉴스는 확정/추측을 판정에 함께 적는다(예: "호재(추측) — 미확정, 신뢰 낮음"). 원문 근거로만 채워 환각 방지.</div>
+    <div class="callout c-info">💡 <code>is_confirmed</code>와 <code>source_trust</code>가 공시엔 없는 뉴스 전용 축이다. "누가, 얼마나 믿을 만하게, 확정된 사실을" 말했는지를 분리해 신뢰도를 방향과 떼어 낸다.</div>
+  </section>
+
+  <!-- 5 -->
+  <section id="s5">
+    <h2><span class="n">05</span> 다층 방어 — 루머는 세 번 걸러진다</h2>
+    <div class="card hl">
+      <div class="spec"><b>① 사전 필터</b> — 출처 BLOCK·키워드 blacklist는 LLM 전에 drop.</div>
+      <div class="spec"><b>② LLM 재판정</b> — 통과분도 LLM이 <code>is_confirmed=False</code>(추측)로 다시 분류.</div>
+      <div class="spec"><b>③ 집계 감점</b> — 루머 비중만큼 <code>confidence</code>를 깎는다(신뢰가중).</div>
+    </div>
+    <div class="callout c-tip">🍳 <b>실작동 (AAPL·NVDA 실데이터 검증)</b> — NVDA 8건 중 확정 1·루머 7 → 신뢰도가 <b>0.14</b>로 하락. "루머뿐이면 신뢰↓"가 실제로 작동한다.</div>
+    <div class="callout c-warn">⚠️ <b>가짜뉴스·조작을 100% 막는 시스템은 없다</b> → 4겹으로 최대한 거르되, 속아도 <b>손절이 최종 방어선</b>(손절은 뒤 단계 몫).</div>
+  </section>
+
+  <!-- 6 -->
+  <section id="s6">
+    <h2><span class="n">06</span> 집계 규칙 — 여러 건 → 대표 1개</h2>
+    <p>종목당 뉴스 여러 건을 <b>대표 1개로 집계</b>해서 넘긴다(뉴스 10건 덤프 금지 — 토큰·노이즈 절감).</p>
+    <table>
+      <tr><th>항목</th><th>규칙</th></tr>
+      <tr><td>방향/강도</td><td>확정·<code>source_trust</code>·<code>certainty</code> <b>신뢰가중</b>. 단 강한 악재(신뢰가중 signed ≤ −0.7)면 보수적으로 그쪽</td></tr>
+      <tr><td><code>importance</code></td><td>신뢰가중 평균(방향 뺀 크기). <code>peak_importance</code>는 집계 전 최댓값을 별도 병기</td></tr>
+      <tr><td><code>confidence</code></td><td><code>certainty × is_confirmed × source_trust</code> 조합 → 루머 많으면 급감</td></tr>
+      <tr><td><code>hard_block</code></td><td>어느 뉴스든 BLOCK류 권한이면 1 (안전장치는 하나만 발동해도)</td></tr>
+    </table>
+    <div class="callout c-info">💡 <b>"잠재 큰데 저신뢰라 눌린" 경우 병기</b> — 실적 beat 헤드라인(잠재 imp 큼)이 저신뢰라 반영값이 눌리면, <code>peak_importance</code>로 잠재/반영을 둘 다 보여준다(<code>[최고imp0.8·저신뢰]</code>).</div>
+
+    <h3>6-1. 산출 방식 고도화 &amp; 근거</h3>
+    <p>단순 평균은 "시끄러운 루머"에 휘둘린다. 그래서 <b>방향 점수</b>와 <b>대표 선정</b> 두 곳을 신뢰도 기준으로 고도화했다.</p>
+
+    <h4>① sentiment_score — 비대칭 신뢰 감쇠</h4>
+    <div class="spec">방향 점수를 <code>0.5 + 0.5 × signed</code>로 매핑하되, <b>호재(+)만 confidence로 중립(0.5) 쪽으로 감쇠</b>한다. <b>악재(−)는 감쇠하지 않는다.</b></div>
+    <pre><code># signed = 방향×강도(-1~+1),  confidence = 집계 신뢰도(0~1)
+if signed > 0:              # 호재만 감쇠
+    signed *= confidence
+sentiment_score = 0.5 + 0.5 * signed
+
+_senti_score(+1.0, conf=1.0) = 1.00   # 확신 호재 → 그대로
+_senti_score(+1.0, conf=0.2) = 0.60   # 저신뢰 호재 → 중립쪽으로 눌림
+_senti_score(-1.0, conf=0.2) = 0.00   # 저신뢰 악재 → 감쇠 안 함(경고 유지)</code></pre>
+    <div class="callout c-tip">🍳 <b>근거</b> — 루머성 <b>낙관</b>은 과신·펌프 위험이라 신뢰가 낮으면 방향을 덜 단정해야 한다. 반대로 <b>악재</b>는 근거가 약해도 흐리면 위험하다("틀려도 작게 잃기"). 그래서 <b>호재는 깎고 악재는 유지</b>하는 비대칭이 "가장 보수적 채택" 사상과 맞는다. <code>importance</code>(순수 강도)는 감쇠 없이 그대로 둬서 방향/강도 축을 분리 유지한다.</div>
+
+    <h4>② 대표 신호·근거 — 신뢰가중 선정</h4>
+    <div class="spec">여러 건 중 대표 이벤트(<code>event_type</code>·<code>reason</code>·<code>top_evidence</code>)를 <b><code>importance</code> 만이 아니라 <code>importance × confidence</code></b>(신뢰가중)가 가장 큰 기사로 뽑는다.</div>
+    <div class="callout c-info">💡 <b>근거</b> — 대표를 순수 importance로 뽑으면 <b>시끄럽지만 미확정인 루머</b>(예: "인수될 것으로 알려져", imp9·저신뢰)가 헤드라인이 된다. 신뢰가중으로 뽑으면 imp가 좀 낮아도 <b>확정·신뢰 높은 사실</b>(예: "실적 확정 beat", imp6·고신뢰)이 대표가 된다. 검증: 루머(imp9·GRAY·미확정) vs 확정(imp6·ALLOW·확정) → 대표 = <b>확정 실적</b>.</div>
+  </section>
+
+  <!-- 7 -->
+  <section id="s7">
+    <h2><span class="n">07</span> 매매권한 · "공시 기다리면 늦지 않나?"</h2>
+    <p>뉴스도 공시와 같은 공통 <code>decision</code> 레이어(6단계, 가장 보수적 채택)를 통과한다. 미확인 뉴스·소셜 단독은 보수적으로 강등된다.</p>
+    <div class="callout c-info">🔗 <b>"공시 기다리면 늦지 않나?" — 맞다.</b> 그래서 진입의 판단 근거는 공시가 아니라 <b>실시간 가격·거래량</b>이다(공시는 늦게 떠 진입 게이트로 못 씀). 단 <b>이미 급등한 뒤 추격은 "고점 매수" 위험</b>(buy the rumor, sell the news). <b>이 실시간 검증·실제 매수는 이 파트가 아니라 Strategist 몫</b>이다 — 우리는 신뢰도 판정까지만.</div>
+    <div class="callout c-warn">⚠️ 이 파트는 뉴스만으로 매수를 확정하지 않는다. 시장반응(가격·거래량) 확인과 진입 타이밍은 범위 밖(Strategist·리스크 게이트).</div>
+  </section>
+
+  <!-- 8 -->
+  <section id="s8">
+    <h2><span class="n">08</span> 산출물 — NewsBundle (Strategist 입력)</h2>
+    <p class="lead">뉴스 최종 산출물. <b>공시와 완전 별개 객체</b>로 넘어가고, 모든 점수는 <b>0~1 소수점</b>으로 통일한다. 라벨성 값(확정·출처등급)도 점수로 노출한다.</p>
+    <pre><code>class NewsBundle:
+    ticker; company_name; category    # 종목 식별(category=스크리닝 전달)
+    as_of; created_at; has_signal     # ★ created_at=레코드 생성시각(초, DB생성일)
+    news_title; source; published_at  # ★ 대표기사 제목·언론사·업로드일시(초 포함)
+    news_count; news_confirmed; news_rumor   # 건수 분해(확정 n·루머 m)
+    event_type
+    sentiment; sentiment_score: 0~1   # 방향 라벨 + 점수(0=악재·0.5=중립·1=호재)
+    importance: 0~1                   # 강도(신뢰가중)
+    peak_importance: 0~1              # 집계 전 최고 잠재
+    risk_score: 0~1
+    confidence: 0~1
+    source_trust: 0~1                 # 뉴스 전용(LLM 판단)
+    grade_score: 0~1                  # 출처 정책등급(ALLOW1·GRAY.6·WATCH.3·BLOCK0)
+    confirmed_score: 0~1              # 확정 비율 = 확정건수 / 전체
+    fact_check                        # ★ 팩트체크 한 문장(Verified/Unverified…)
+    hard_block: 0/1 + hard_block_reason
+    verdict; summary; keywords         # ★ 대표 기사의 호재/악재 판정·요약·키워드5
+    top_evidence: list; reason; ref
+    def to_prompt() -> str</code></pre>
+    <div class="callout c-info">💡 <b>대표 기사 기준</b> — 뉴스는 여러 건을 대표 1개로 집계하므로, <code>verdict</code>·<code>summary</code>·<code>keywords</code>와 원문 식별(<code>news_title</code>·<code>source</code>·<code>published_at</code>)은 <b>신뢰가중(§6-1)으로 뽑힌 대표 기사</b>의 값이다. <code>published_at</code>은 <b>초까지</b> 포함(RSS pubDate). 시끄러운 루머가 아니라 확정·신뢰 높은 기사가 실린다.</div>
+    <div class="callout c-info">💡 <b>source_trust(LLM 판단)와 grade_score(정책 등급)를 분리</b> 노출한다. 확정 여부도 bool이 아니라 <code>confirmed_score</code>(확정건수/전체)로 점수화 — 모든 값이 숫자라 파싱·검증이 안정적. 정식 전달은 JSON, <code>to_prompt()</code>는 보조.</div>
+    <h3>8-1. to_prompt() 실출력 예시</h3>
+    <pre><code>[NVDA · NVIDIA CORP · Semiconductors] News as_of 2026-07-03
+ News: 3 items (confirmed2·rumor1) → positive(0.84) imp0.67 trust0.88 grade0.95 conf0.6 [peak imp0.8·low-conf]
+       Source: reuters.com · published 2026-07-03T14:30:05+00:00
+       Fact-check: Verified — 2/3 confirmed, trust 0.88, grade 0.95.
+       Verdict: Bullish — confirmed earnings surprise, upside expected.
+       Summary: Q2 results beat consensus. Revenue +22% YoY. Guidance raised.
+       Keywords: earnings, surprise, revenue +22%, guidance raised, semiconductors
+       Evidence: "reuters.com: Nvidia earnings beat expectations Q2"
+ Overall: hard_block=0 · generated 2026-07-03T14:31:00+00:00</code></pre>
+    <div class="callout c-info">💡 <b>출력 언어 = 영어</b> — 자유서술(<code>summary</code>·<code>verdict</code>·<code>reason</code>)과 <code>to_prompt()</code> 라벨은 <b>전부 영어</b>(전략가 에이전트가 읽음). enum·점수는 공통.</div>
+  </section>
+
+  <!-- 9 -->
+  <section id="s9">
+    <h2><span class="n">09</span> 역할 경계 — 하는 것 / 안 하는 것</h2>
+    <div class="card">
+      <h4 style="color:var(--green-d)">✔ 이 파트가 한다</h4>
+      <ul>
+        <li>Google News RSS <b>실수집</b>(키 불필요) + DB 기반 dedup</li>
+        <li>출처 4단계 + 키워드 <b>사전필터</b>(LLM 전 조기 종료)</li>
+        <li>LLM 사실/루머·출처신뢰 <b>판정</b>(is_confirmed·source_trust) + 다층 방어</li>
+        <li>NewsBundle 산출·전달 + 백테스트 수익률(측정만)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 style="color:var(--rose)">✘ 이 파트가 안 한다 (Strategist·이후 몫)</h4>
+      <ul>
+        <li><b>실시간 가격·거래량 검증</b> · 실제 매수 확정(고점 추격 판단)</li>
+        <li>공시와 뉴스의 <b>결합·가중치</b> — 두 Bundle을 Strategist가 직접 합침</li>
+        <li>가중치 자동 튜닝 — 과적합 방지로 <b>측정·리포트까지만</b></li>
+      </ul>
+    </div>
+    <div class="callout c-tip">🍳 <b>한 줄 요약</b> — 뉴스 파트는 <b>"빠르지만 진위가 섞인 정보를, 여러 겹으로 신뢰도 판정해서"</b> Strategist에게 넘긴다. 화제성≠신뢰라 <b>확정·출처를 점수로 분리</b>해 넘기고, 진입 판단은 넘긴다.</div>
+  </section>
+
+  <div class="divider"></div>
+  <p style="color:var(--dim);font-size:13px">Quantinue · 정보분석 파트 ② 뉴스(News) 상세 설계서 · collector-agent · 2026-07-03<br>
+  근거: 구현 코드 <code>app/</code>(news_collector·source_trust_policy·news_analyzer·news_pipeline) · 데이터스키마_인터페이스명세_v2</p>
+  </main>
+</div>
+</body>
+</html>

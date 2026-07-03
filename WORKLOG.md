@@ -1,6 +1,6 @@
 # Quantinue 작업노트 (WORKLOG)
 
-> 마지막 업데이트: 2026-07-01
+> 마지막 업데이트: 2026-07-03
 > 이 파일 하나만 읽으면 다음 세션에서 바로 이어갈 수 있게 정리한 작업노트.
 > (프로젝트 소개·구조는 `README.md`, 설계 배경은 Claude 메모리 `quantinue-*` 참고)
 >
@@ -16,6 +16,31 @@
 **유니버스 시총 확장** + **백테스트 피드백(전방수익률 채우기·성과 리포트)** 까지 동작.
 MVP 정보분석 파트 **한 바퀴 완성**. 남은 건 Phase 2 정교화(리스크문구·Surprise·sector 등).
 (실제 매수권한·시장반응은 이 파트 범위 밖 — 별도 Strategist 에이전트 몫)
+
+---
+
+## 0.5 최근 변경 이력 (2026-07-02 ~ 07-03)
+
+Strategist 전달 계약(구 `AnalysisBundle`)을 팀 회의 피드백으로 대개편하고, 이후 필드·정책을 추가했다.
+
+- **인터페이스 대개편 (07-02):** 공시·뉴스를 **완전 별개 2객체**(`DisclosureBundle`/`NewsBundle`)로 분리,
+  모든 점수 **0~1 소수점 통일**(방향은 `sentiment_score`+라벨), 회사명·카테고리 필드.
+  명세: `데이터스키마_인터페이스명세_v2.md`(+`.html`).
+- **화제성(Buzz) 제거 (07-03):** 07-02에 넣은 클러스터링을 오버기능으로 판단해 삭제.
+- **스크리닝→정보분석 입력 계약 (07-03):** 스크리닝 에이전트가 주는 50종목 JSON 스키마 + 로더
+  `run_screening_input.py`(유니버스 적재·`--exclusive`·`--run`). 문서 `스크리닝_입력스키마_*`.
+- **상세 설계서 (07-03):** `공시_상세설계서.html`·`뉴스_상세설계서.html`(라이트 테마, 팀 설계서 0701.html 형식).
+- **번들 필드 확장 (07-03):**
+  - `sentiment_score` **비대칭 신뢰 감쇠**(호재만 감쇠·악재 유지) + 대표 신호 **신뢰가중(imp×conf)** 선정.
+  - `summary`(전문 3~4줄)·`keywords`(5개)·`verdict`(호재/악재 판정 한 문장).
+  - **출력 영어화** — 자유서술·`to_prompt()` 라벨을 전략가 에이전트용 영어(verdict=Bullish/Bearish/Neutral).
+  - **원문 식별** — 공시 `filing_title`·`filing_no`·`filed_at`(**초 포함** acceptanceDateTime) /
+    뉴스 `news_title`·`source`·`published_at`(**초 포함**).
+  - `fact_check`(코드 판정 팩트체크 한 문장) · `created_at`(레코드 생성시각, 초 포함).
+
+반영 위치: `app/common/analysis_bundle.py` · `app/schemas/*` · `app/analyzers/prompts/*` ·
+`app/collectors/sec_collector.py` · `app/pipeline.py` · `app/storage/db.py`.
+엔트리 `run_bundle.py`(단건) / `run_screening_input.py`(스크리닝 배치).
 
 ---
 

@@ -82,6 +82,14 @@ python run_skeleton.py --ticker AAPL --form 10-Q --live --llm --save
   ```
 
 - ✅ **Phase 2**: 공시 `filed_at` 저장(백테스트 day0 정확도) · **10-Q/K 본문 리스크문구 스캔**(going concern 등 → BLOCK_BUY)
+- ✅ **Strategist 계약 v2 + 번들 필드 확장** (2026-07-02~03) — 공시·뉴스 **별개 2객체**(`DisclosureBundle`/`NewsBundle`) ·
+  점수 0~1 통일 · **요약·키워드·호재/악재 판정** · **출력 영어화**(전략가 에이전트용) ·
+  **원문 식별**(공시 번호·제목·초단위 업로드시각 / 뉴스 언론사·제목·초단위 시각) · **팩트체크·생성시각**.
+  스크리닝→정보분석 입력 로더 `run_screening_input.py`. 상세: `데이터스키마_인터페이스명세_v2` · `공시/뉴스_상세설계서.html`.
+  ```bash
+  python run_bundle.py --ticker NVDA --category "Semiconductors" --llm --json
+  python run_screening_input.py --file screening_input.json --run --llm --json
+  ```
 
 > 📌 MVP 정보분석 파트(공시·뉴스·유니버스·스케줄러·저장·백테스트) **한 바퀴 완성** + Phase 2 정교화 착수.
 
