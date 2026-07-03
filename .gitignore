@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# SQLite DB
+*.db
+
+# 업로드된 음성 파일 (디렉터리는 유지)
+storage/audio/*
+!storage/audio/.gitkeep
+
+# 환경설정
+.env
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
