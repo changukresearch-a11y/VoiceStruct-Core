@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>입력 스키마 명세 — 스크리닝 → 정보분석</title>
+<style>
+  :root{
+    --bg:#0e1220; --panel:#161c2e; --panel2:#1d2438; --ink:#e8ecf6; --sub:#9aa6c2;
+    --line:#2a3350; --accent:#5b8cff; --accent2:#8b6cff; --good:#2ec27e; --bad:#ff5d6c;
+    --warn:#ffb454; --chip:#222b46; --screen:#ffb454; --info:#5b8cff;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:radial-gradient(1200px 700px at 80% -10%, #2a2440 0%, var(--bg) 55%);
+    color:var(--ink);font-family:"Segoe UI","Malgun Gothic",system-ui,sans-serif;line-height:1.7;letter-spacing:-.1px}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 26px}
+  a{color:var(--accent);text-decoration:none}
+
+  header.hero{padding:56px 0 40px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,180,84,.10), transparent)}
+  .kicker{color:var(--warn);font-weight:700;letter-spacing:3px;font-size:12px;text-transform:uppercase}
+  h1{font-size:34px;line-height:1.22;margin:12px 0 8px;font-weight:800}
+  h1 .grad{background:linear-gradient(90deg,#ffcf8a,#ff9d5b);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{color:var(--sub);font-size:16px;max-width:760px}
+  .flow{display:flex;align-items:center;gap:10px;margin:18px 0 4px;flex-wrap:wrap}
+  .node{padding:7px 14px;border-radius:10px;font-weight:700;font-size:13.5px;border:1px solid var(--line)}
+  .node.s{background:rgba(255,180,84,.14);color:#ffcf8a;border-color:rgba(255,180,84,.35)}
+  .node.i{background:rgba(91,140,255,.14);color:#9bbcff;border-color:rgba(91,140,255,.35)}
+  .arrow{color:var(--sub);font-size:20px}
+  .meta-row{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}
+  .pill{background:var(--chip);border:1px solid var(--line);color:var(--sub);padding:5px 12px;border-radius:999px;font-size:12.5px}
+  .pill b{color:var(--ink)}
+
+  nav.toc{position:sticky;top:0;z-index:20;background:rgba(14,18,32,.86);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:11px 0}
+  nav.toc .wrap{display:flex;flex-wrap:wrap;gap:5px}
+  nav.toc a{font-size:12.5px;color:var(--sub);padding:6px 10px;border-radius:8px}
+  nav.toc a:hover{background:var(--panel2);color:var(--ink)}
+
+  section{padding:42px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:24px;margin:0 0 6px;font-weight:800;display:flex;align-items:center;gap:12px}
+  h2 .num{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9px;
+    background:linear-gradient(135deg,var(--warn),var(--accent));font-size:14px;color:#fff;flex:0 0 auto}
+  h3{font-size:17px;margin:26px 0 10px;font-weight:700}
+  .section-sub{color:var(--sub);margin:0 0 18px;font-size:14.5px}
+  p{margin:11px 0}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:20px 22px;margin:16px 0}
+  .grid{display:grid;gap:16px}
+  .grid.c2{grid-template-columns:1fr 1fr}
+  @media(max-width:840px){.grid.c2{grid-template-columns:1fr}}
+
+  .tag{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11.5px;font-weight:700}
+  .t-req{background:rgba(46,194,126,.16);color:#7fe0ac;border:1px solid rgba(46,194,126,.32)}
+  .t-rec{background:rgba(255,180,84,.15);color:#ffcf8a;border:1px solid rgba(255,180,84,.3)}
+  .t-opt{background:rgba(154,166,194,.14);color:#b9c2da;border:1px solid rgba(154,166,194,.28)}
+  .t-no{background:rgba(255,93,108,.14);color:#ff9aa4;border:1px solid rgba(255,93,108,.3)}
+
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--panel2);color:var(--ink);font-weight:700;font-size:12.5px}
+  tr:last-child td{border-bottom:none}
+  td.ctr{text-align:center}
+  code{background:var(--chip);padding:1px 6px;border-radius:5px;font-size:12.5px;color:#c9d6ff;font-family:"Cascadia Code",Consolas,monospace}
+  .range{font-family:monospace;color:#ffcf8a;font-size:12.5px;white-space:nowrap}
+
+  pre{background:#0a0e1a;border:1px solid var(--line);border-radius:12px;padding:17px 19px;overflow:auto;
+    font-family:"Cascadia Code",Consolas,monospace;font-size:12.5px;color:#cdd7f0;line-height:1.6}
+  .c-good{color:#7fe0ac}.c-bad{color:#ff8a95}.c-key{color:#9bbcff}.c-com{color:#6b779c;font-style:italic}.c-str{color:#e6c07b}
+
+  .callout{border-left:4px solid var(--accent);background:var(--panel2);padding:13px 17px;border-radius:0 12px 12px 0;margin:16px 0;font-size:14px}
+  .callout.warn{border-color:var(--warn)}.callout.good{border-color:var(--good)}.callout.bad{border-color:var(--bad)}
+  .callout .co-t{font-weight:700;margin-bottom:2px}
+  .callout.warn .co-t{color:var(--warn)}.callout.good .co-t{color:var(--good)}.callout.bad .co-t{color:var(--bad)}
+
+  .steps{counter-reset:st;list-style:none;padding:0;margin:8px 0}
+  .steps li{counter-increment:st;position:relative;padding:8px 0 8px 42px;color:var(--sub);font-size:14px}
+  .steps li::before{content:counter(st);position:absolute;left:0;top:6px;width:26px;height:26px;border-radius:8px;
+    background:linear-gradient(135deg,var(--warn),var(--accent));color:#fff;font-weight:800;font-size:13px;
+    display:flex;align-items:center;justify-content:center}
+  .steps li b{color:var(--ink)}
+  .foot{padding:34px 0 60px;color:var(--sub);font-size:13px}
+  .divider{height:1px;background:var(--line);margin:22px 0}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">Quantinue · 입력 계약</div>
+    <h1>입력 스키마 명세 <span class="grad">v1</span><br>스크리닝(스케일러) → 정보분석(공시·뉴스)</h1>
+    <p class="lead">스크리닝 에이전트가 넘길 <b>50개 종목 리스트</b>의 형식·전달 방식.
+    <b>정보분석 서비스 코드를 고치지 않고 그대로 돌릴 수 있게</b> 우리 내부 소비 지점에 1:1로 맞춘 계약이다.</p>
+    <div class="flow">
+      <span class="node s">스크리닝(스케일러)</span>
+      <span class="arrow">→</span>
+      <span class="node i">정보분석(공시·뉴스)</span>
+      <span class="arrow">→</span>
+      <span class="node i" style="opacity:.6">Strategist</span>
+    </div>
+    <div class="meta-row">
+      <span class="pill">작성 <b>정창욱</b></span>
+      <span class="pill">대상 <b>스크리닝(스케일러) 담당</b></span>
+      <span class="pill">형식 <b>JSON 배열</b></span>
+      <span class="pill">필수 필드 <b>ticker 하나</b></span>
+    </div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="wrap">
+    <a href="#s0">TL;DR</a>
+    <a href="#s1">1. 우리가 쓰는 값</a>
+    <a href="#s2">2. 입력 스키마</a>
+    <a href="#s3">3. 규약</a>
+    <a href="#s4">4. 전달·실행</a>
+    <a href="#s5">5. 열린 질문</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- TLDR -->
+<section id="s0">
+  <div class="card">
+    <h3 style="margin-top:0">핵심 4가지</h3>
+    <table>
+      <tr><td><b>① JSON 배열 하나</b></td><td>50개 종목을 배열로. 각 원소가 종목 1개. 봉투(<code>as_of</code>·<code>count</code>)는 선택.</td></tr>
+      <tr><td><b>② 필수는 <code>ticker</code>뿐</b></td><td>회사명·CIK는 우리가 SEC에서 자동으로 채운다. 티커만 있으면 공시·뉴스를 스스로 수집.</td></tr>
+      <tr><td><b>③ 필드명 = 우리 내부명</b></td><td>매핑·변환 코드 없이 <code>upsert_company()</code>에 바로 흘려 유니버스 적재 → 기존 엔트리 그대로 실행.</td></tr>
+      <tr><td><b>④ 점수·센티먼트 금지</b></td><td>그건 우리가 만든다. 스크리닝은 <b>선별 + 분류(category)</b>까지만.</td></tr>
+    </table>
+  </div>
+  <div class="grid c2">
+    <div class="card" style="border-color:rgba(255,180,84,.3)">
+      <div style="font-weight:800;color:#ffcf8a;margin-bottom:4px">스크리닝이 주는 것</div>
+      <p style="color:var(--sub);font-size:14px;margin:2px 0">종목 티커 · 순위(rank) · 분류(category) — <b>이미 아는 것만</b></p>
+    </div>
+    <div class="card" style="border-color:rgba(91,140,255,.3)">
+      <div style="font-weight:800;color:#9bbcff;margin-bottom:4px">우리가 알아서 하는 것</div>
+      <p style="color:var(--sub);font-size:14px;margin:2px 0">회사명 · CIK 매핑 · 공시/뉴스 수집 · 분석·점수화</p>
+    </div>
+  </div>
+</section>
+
+<!-- 1 -->
+<section id="s1">
+  <h2><span class="num">1</span> 우리가 실제로 쓰는 값</h2>
+  <p class="section-sub">정보분석 파이프라인은 <b>전부 <code>ticker</code> 기준</b>으로 동작한다. 티커만 있으면 공시(SEC)·뉴스(RSS)를 스스로 수집한다.</p>
+  <table>
+    <tr><th>우리 코드가 받는 것</th><th>어디서 쓰나</th><th>없으면?</th></tr>
+    <tr><td><code>ticker</code></td><td>공시/뉴스 수집 키 · <code>companies</code> PK</td><td><b class="c-bad">필수</b> — 없으면 아무것도 못 함</td></tr>
+    <tr><td><code>category</code></td><td>번들에 <b>그대로 통과</b> (우리에게 다른 소스 없음)</td><td>결과에 카테고리가 빔</td></tr>
+    <tr><td><code>company_name</code></td><td>표시용</td><td><span class="c-good">SEC에서 자동</span></td></tr>
+    <tr><td><code>cik</code></td><td>SEC 조회 키</td><td><span class="c-good">티커로 자동 매핑</span></td></tr>
+    <tr><td><code>sector</code></td><td><code>companies.sector</code>(선택)</td><td>비워둠</td></tr>
+    <tr><td><code>rank</code></td><td><code>companies.priority</code> = <b>처리 순서</b></td><td>기본값(순위 없음)</td></tr>
+  </table>
+  <div class="callout good">
+    <div class="co-t">설계 원칙</div>
+    스크리닝이 <b>이미 아는 것(순위·카테고리)</b>만 주면 되고, <b>우리가 알아낼 수 있는 것(회사명·CIK)</b>은 안 줘도 된다.
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="s2">
+  <h2><span class="num">2</span> 입력 스키마 (권장 형식)</h2>
+
+  <h3>2-1. 봉투(envelope) + 종목 배열</h3>
+  <pre>{
+  <span class="c-key">"schema"</span>: "quantinue.screening_input.v1",
+  <span class="c-key">"as_of"</span>: "2026-07-03",
+  <span class="c-key">"count"</span>: 50,
+  <span class="c-key">"companies"</span>: [
+    { <span class="c-key">"ticker"</span>: "NVDA", <span class="c-key">"company_name"</span>: "NVIDIA CORP", <span class="c-key">"category"</span>: "반도체", <span class="c-key">"rank"</span>: 1 },
+    { <span class="c-key">"ticker"</span>: "AAPL", <span class="c-key">"company_name"</span>: "Apple Inc.",  <span class="c-key">"category"</span>: "빅테크", <span class="c-key">"rank"</span>: 2 },
+    { <span class="c-key">"ticker"</span>: "LLY",  <span class="c-key">"company_name"</span>: "Eli Lilly",   <span class="c-key">"category"</span>: "제약/바이오", <span class="c-key">"rank"</span>: 3 }
+  ]
+}</pre>
+  <div class="callout">
+    <div class="co-t">봉투 없이 배열만 줘도 OK</div>
+    <code>[ {"ticker":"NVDA", ...}, ... ]</code> 형태도 받는다. 봉투는 <code>as_of</code>·<code>count</code>로 검증·감사에 편해서 권장.
+  </div>
+
+  <h3>2-2. 종목 원소 필드</h3>
+  <table>
+    <tr><th>필드</th><th>타입</th><th>필수</th><th>우리 쪽 매핑</th><th>설명</th></tr>
+    <tr><td><code>ticker</code></td><td class="range">str</td><td class="ctr"><span class="tag t-req">필수</span></td><td>수집 키 · <code>companies.ticker</code></td><td>미국 티커, <b>대문자</b>. 예 <code>NVDA</code>. 클래스주는 SEC 표기(<code>BRK-B</code>)</td></tr>
+    <tr><td><code>category</code></td><td class="range">str</td><td class="ctr"><span class="tag t-rec">권장</span></td><td>번들 <code>category</code> 통과</td><td>종목 분류(섹터/테마). <b>우리가 못 만드는 값</b> → 줄 수 있으면 꼭</td></tr>
+    <tr><td><code>rank</code></td><td class="range">int</td><td class="ctr"><span class="tag t-rec">권장</span></td><td><code>companies.priority</code></td><td>스크리닝 순위(1=최상위). <b>우리 처리 순서</b>가 됨. 없으면 배열 순서</td></tr>
+    <tr><td><code>company_name</code></td><td class="range">str</td><td class="ctr"><span class="tag t-opt">선택</span></td><td><code>companies.name</code></td><td>없으면 SEC에서 자동</td></tr>
+    <tr><td><code>cik</code></td><td class="range">str</td><td class="ctr"><span class="tag t-opt">선택</span></td><td><code>companies.cik</code></td><td>10자리(<code>0001045810</code>) 또는 정수. 없으면 자동 매핑</td></tr>
+    <tr><td><code>sector</code></td><td class="range">str</td><td class="ctr"><span class="tag t-opt">선택</span></td><td><code>companies.sector</code></td><td>GICS 섹터 등 별도 저장(선택)</td></tr>
+    <tr><td><code>note</code>/<code>reason</code></td><td class="range">str</td><td class="ctr"><span class="tag t-opt">선택</span></td><td>저장만(로직 미사용)</td><td>스크리닝 근거. 감사·디버깅용 보관</td></tr>
+  </table>
+
+  <h3>2-3. 보내지 말아야 할 것</h3>
+  <div class="callout bad">
+    <div class="co-t">분석 결과성 값은 금지 <span style="font-weight:400;color:var(--sub)">— 우리가 만드는 값</span></div>
+    <code>sentiment</code> · <code>sentiment_score</code> · <code>importance</code> · <code>risk_score</code> · <code>event_type</code> ·
+    <code>confidence</code> · <code>hard_block</code> · <code>score</code> 등. 보내도 <b>무시</b>되며, 혼선 방지를 위해 아예 넣지 말 것.
+    스크리닝의 역할은 <b>선별 + 분류</b>까지다.
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="s3">
+  <h2><span class="num">3</span> 규약</h2>
+  <table>
+    <tr><td><b>인코딩</b></td><td>UTF-8. 한글 카테고리 그대로 OK</td></tr>
+    <tr><td><b>티커 정규화</b></td><td>대문자, 공백·따옴표 없이. 같은 티커 중복 금지(마지막 것으로 upsert)</td></tr>
+    <tr><td><b>개수</b></td><td>50개 전후 자유. <code>count</code>를 주면 배열 길이와 대조 검증</td></tr>
+    <tr><td><b>rank 유일성</b></td><td>가능하면 1..N 유니크. 겹치면 우선순위 동률(티커 알파벳순 tie-break)</td></tr>
+    <tr><td><b>category 라벨</b></td><td>값 체계는 합의 대상(§5). 무엇이든 <b>문자열 하나</b>면 우리는 통과시킴</td></tr>
+  </table>
+</section>
+
+<!-- 4 -->
+<section id="s4">
+  <h2><span class="num">4</span> 전달 방식 — 우리가 그대로 돌리는 경로</h2>
+  <div class="grid c2">
+    <div class="card">
+      <h3 style="margin-top:0">전달 = 파일 하나</h3>
+      <p style="color:var(--sub);font-size:14px"><code>screening_input.json</code> (UTF-8, §2 형식). 전용 로더 <b><code>run_screening_input.py</code></b> 가 받는다:</p>
+      <ol class="steps">
+        <li>각 원소를 <b><code>upsert_company()</code></b>로 적재 후 <b><code>priority=rank</code>·<code>active=1</code></b> 확정 <span style="font-size:12.5px">(cik/name 없으면 SEC 자동, <code>--exclusive</code> 면 목록 외 비활성)</span></li>
+        <li><b><code>category</code></b>는 파일→메모리→번들로 <b>그대로 통과</b>(companies 스키마 변경 불필요)</li>
+        <li><code>--run</code> 이후 또는 별도로 <b>기존 엔트리를 코드 수정 없이 실행</b></li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">그대로 실행</h3>
+      <pre style="margin-top:6px"><span class="c-com"># 로더 — 적재(+이 50개만 active)</span>
+python run_screening_input.py \
+  --file screening_input.json --exclusive
+
+<span class="c-com"># 로더 — 적재 + 번들 생성(category 통과)</span>
+python run_screening_input.py \
+  --file screening_input.json --run --llm --json
+
+<span class="c-com"># 유니버스 순회(공시+뉴스, rank 순)</span>
+python run_scheduler.py --once --limit 50 \
+  --forms 8-K,10-Q --news --llm --save</pre>
+      <p style="color:var(--sub);font-size:13px;margin-bottom:0">스크리닝 <code>rank</code> → <code>companies.priority</code> 이므로 <code>--limit N</code>이 <b>스크리닝 순위 순</b> 상위 N개를 돈다.</p>
+    </div>
+  </div>
+  <div class="callout good">
+    <div class="co-t">검증됨</div>
+    견본 <code>screening_input.example.json</code>로 적재(priority=rank 정확)·<code>--exclusive</code> working-set·<code>--run</code> 번들 생성(category "반도체" 양쪽 통과)까지 실측 확인. 기존 서비스 코드는 무수정.
+  </div>
+</section>
+
+<!-- 5 -->
+<section id="s5">
+  <h2><span class="num">5</span> 스크리닝 담당과 합의할 것</h2>
+  <ol style="padding-left:18px;color:var(--sub);font-size:14.5px;line-height:1.95">
+    <li><b>category 값 체계</b> — GICS 11섹터 영문? 자체 한글 테마 라벨? (우리는 문자열이면 통과하지만, 백테스트 집계·Strategist 결합엔 <b>일관 라벨</b>이 좋음)</li>
+    <li><b>rank 의미</b> — 시총 순위? 스크리닝 점수 순위? 우리는 순서로만 쓴다</li>
+    <li><b>갱신 주기</b> — 50개 리스트를 얼마나 자주 새로 주는가(매일? 장중?). 우리 스케줄러 주기와 맞춤</li>
+    <li><b>CIK 제공 여부</b> — 주면 SEC 매핑 1스텝 절약. 안 줘도 됨</li>
+  </ol>
+  <div class="callout good">
+    <div class="co-t">소비 지점 (우리 코드)</div>
+    <code>app/universe/repository.py</code>(<code>upsert_company</code>·<code>companies</code>) · <code>app/universe/seed.py</code>(적재 패턴) ·
+    <code>app/scheduler/scheduler.py</code>(우선순위 순회) · <code>run_bundle.py</code>(<code>--category</code> 통과)<br>
+    반대 방향(우리 → Strategist) 출력 계약: <code>데이터스키마_인터페이스명세_v2.html</code>
+  </div>
+</section>
+
+</div>
+
+<div class="wrap foot">
+  <div class="divider"></div>
+  Quantinue · 입력 스키마 명세 v1 · 스크리닝(스케일러) → 정보분석(공시·뉴스) &nbsp;·&nbsp; 정창욱 &nbsp;·&nbsp; 2026-07-03
+</div>
+
+</body>
+</html>

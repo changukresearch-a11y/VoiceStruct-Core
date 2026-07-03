@@ -1,0 +1,12 @@
+{
+  "schema": "quantinue.screening_input.v1",
+  "as_of": "2026-07-03",
+  "count": 5,
+  "companies": [
+    { "ticker": "NVDA", "company_name": "NVIDIA CORP", "cik": "0001045810", "category": "반도체",     "rank": 1 },
+    { "ticker": "AAPL", "company_name": "Apple Inc.",  "cik": "0000320193", "category": "빅테크",     "rank": 2 },
+    { "ticker": "LLY",  "company_name": "Eli Lilly & Co", "cik": "0000059478", "category": "제약/바이오", "rank": 3 },
+    { "ticker": "JPM",  "company_name": "JPMorgan Chase", "cik": "0000019617", "category": "금융",       "rank": 4 },
+    { "ticker": "XOM",  "company_name": "Exxon Mobil",    "cik": "0000034088", "category": "에너지",     "rank": 5 }
+  ]
+}
