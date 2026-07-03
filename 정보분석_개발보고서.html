@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantinue · 정보분석(공시·뉴스) 개발 보고서 — 정창욱</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root{
+    --bg:#f7f9fc; --bg-soft:#eef2f9; --card:#fff; --line:#e2e7f1;
+    --text:#1b2338; --dim:#5c6788; --accent:#16a34a; --accent-soft:rgba(22,163,74,.10);
+    --gold:#b45309; --gold-soft:rgba(180,83,9,.10); --red:#dc2626; --red-soft:rgba(220,38,38,.09);
+    --blue:#2563eb; --blue-soft:rgba(37,99,235,.09); --violet:#7c3aed; --violet-soft:rgba(124,58,237,.09);
+    --mono:"SF Mono",ui-monospace,"Cascadia Code",Menlo,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box} html{scroll-behavior:smooth}
+  body{font-family:"Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;background:var(--bg);
+    color:var(--text);line-height:1.7;letter-spacing:-.01em;counter-reset:secnum;padding-left:256px}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+  [id]{scroll-margin-top:20px}
+  a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+
+  .sidebar{position:fixed;top:0;left:0;width:256px;height:100vh;overflow-y:auto;background:#fff;
+    border-right:1px solid var(--line);padding:22px 14px;z-index:50}
+  .sidebar .st{font-size:14px;font-weight:800;margin:2px 8px 2px} .sidebar .ss{font-size:11.5px;font-weight:600;color:var(--dim);margin:0 8px 16px}
+  .sidebar nav{display:flex;flex-direction:column;gap:2px}
+  .sidebar a{display:flex;gap:9px;padding:6px 10px;border-radius:8px;font-size:12.7px;color:var(--dim)}
+  .sidebar a:hover{background:var(--accent-soft);color:var(--accent);text-decoration:none}
+  .sidebar a .num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent);width:18px;flex-shrink:0}
+  @media(max-width:900px){body{padding-left:0}.sidebar{position:sticky;width:100%;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:8px 10px}.sidebar .st,.sidebar .ss{display:none}.sidebar nav{flex-direction:row;overflow-x:auto;gap:4px}.sidebar a{flex-shrink:0;white-space:nowrap;background:var(--bg-soft)}}
+
+  h2::before{counter-increment:secnum;content:counter(secnum,decimal-leading-zero);color:var(--accent);
+    font-family:var(--mono);font-weight:800;font-size:.62em;margin-right:12px;vertical-align:2px}
+  header{padding:72px 0 52px;background:radial-gradient(ellipse 60% 50% at 70% 0%,rgba(74,222,128,.10),transparent),radial-gradient(ellipse 50% 40% at 20% 10%,rgba(96,165,250,.08),transparent);border-bottom:1px solid var(--line)}
+  .badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .badge{font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:999px;border:1px solid var(--line);color:var(--dim);background:var(--bg-soft)}
+  .badge.green{color:var(--accent);border-color:rgba(74,222,128,.35);background:var(--accent-soft)}
+  .badge.blue{color:var(--blue);border-color:rgba(37,99,235,.3);background:var(--blue-soft)}
+  h1{font-size:clamp(28px,5vw,40px);font-weight:800;letter-spacing:-.03em;line-height:1.25}
+  h1 .grad{background:linear-gradient(90deg,var(--accent),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .subtitle{margin-top:13px;font-size:16.5px;color:var(--dim);max-width:680px}
+  .meta{margin-top:24px;display:flex;gap:22px;flex-wrap:wrap;font-size:14px;color:var(--dim)} .meta b{color:var(--text);font-weight:700}
+
+  section{padding:50px 0 6px}
+  .sec-label{font-size:12.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;margin-bottom:7px}
+  h2{font-size:25px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+  h3{font-size:16.5px;font-weight:700;margin:22px 0 8px}
+  h4{font-size:14px;font-weight:700;color:var(--gold);margin:14px 0 4px}
+  .sec-desc{color:var(--dim);font-size:15px;margin-bottom:20px;max-width:760px}
+  p{font-size:14.5px;margin:9px 0} ul,ol{margin:9px 0 9px 20px} li{margin:4px 0;font-size:14.3px}
+  b,strong{color:var(--text);font-weight:700}
+
+  .pipeline{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}
+  .pipe{flex:1 1 90px;min-width:96px;padding:12px 8px;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:11px;font-size:12.5px;color:var(--dim);position:relative}
+  .pipe .n{display:block;font-size:10.5px;opacity:.7;margin-bottom:2px} .pipe .nm{font-weight:700;color:var(--text);font-size:13px}
+  .pipe.mine{background:var(--accent-soft);border-color:rgba(74,222,128,.45)} .pipe.mine .nm{color:var(--accent)}
+  .pipe.mine::after{content:"내 담당";position:absolute;top:-9px;right:6px;font-size:10px;font-weight:700;color:#fff;background:var(--accent);padding:1px 7px;border-radius:999px}
+
+  .grid{display:grid;gap:13px} .grid.c2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))} .grid.c3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .card h3{margin-top:0;font-size:15.5px}
+
+  .tbl{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card);margin:12px 0}
+  table{width:100%;border-collapse:collapse;font-size:13.3px;min-width:560px}
+  th{text-align:left;padding:11px 14px;font-size:11.7px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line);background:var(--bg-soft);white-space:nowrap}
+  td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top} tr:last-child td{border-bottom:none}
+  td .dim{color:var(--dim);font-size:12.5px}
+  code{font-family:var(--mono);font-size:.86em;background:var(--bg-soft);border:1px solid var(--line);padding:1px 5px;border-radius:5px;color:#9a3412}
+  .tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+  .tag.code{color:var(--dim);background:rgba(154,165,196,.14)} .tag.llm{color:var(--gold);background:var(--gold-soft)}
+  .tag.sec{color:var(--blue);background:var(--blue-soft)} .tag.rss{color:#0e7490;background:rgba(14,116,144,.1)}
+  .tag.g{color:var(--accent);background:var(--accent-soft)} .tag.r{color:var(--red);background:var(--red-soft)} .tag.v{color:var(--violet);background:var(--violet-soft)}
+  .perm{font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px}
+  .p1{background:#dcfce7;color:#14532d}.p2{background:#fef9c3;color:#854d0e}.p3{background:#eef2f9;color:#475569}.p4{background:#ffe4e6;color:#9f1239}.p5{background:#fecdd3;color:#9f1239}.p6{background:#fda4af;color:#881337}
+
+  pre{background:#0f172a;border-radius:12px;padding:15px 17px;overflow-x:auto;margin:11px 0}
+  pre code{font-family:var(--mono);font-size:12.4px;line-height:1.62;color:#e2e8f0;background:none;border:none;padding:0}
+  .cm{color:#6b7a99} .kw{color:#7dd3fc} .st2{color:#fca5a5} .nm2{color:#fcd34d}
+  .call{border-radius:12px;padding:12px 15px;margin:12px 0;border:1px solid;font-size:14px}
+  .call.g{background:var(--accent-soft);border-color:rgba(74,222,128,.35)} .call.b{background:var(--blue-soft);border-color:rgba(37,99,235,.3)}
+  .call.w{background:var(--gold-soft);border-color:rgba(251,191,36,.35)} .call.r{background:var(--red-soft);border-color:rgba(248,113,113,.35)}
+  .call b{color:var(--text)}
+  .kv{display:flex;gap:10px;font-size:13.5px;padding:6px 0;border-bottom:1px dashed var(--line)} .kv:last-child{border:none}
+  .kv b{font-family:var(--mono);color:var(--text);min-width:130px}
+  footer{padding:40px 0 70px;color:var(--dim);font-size:13px;border-top:1px solid var(--line);margin-top:40px}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="st">정보분석 개발 보고서</div>
+  <div class="ss">공시·뉴스 → Strategist · collector-agent</div>
+  <nav>
+    <a href="#s1"><span class="num">01</span> 파이프라인 위치</a>
+    <a href="#s2"><span class="num">02</span> 아키텍처·모듈맵</a>
+    <a href="#s3"><span class="num">03</span> 공시 파이프라인</a>
+    <a href="#s4"><span class="num">04</span> 뉴스 파이프라인</a>
+    <a href="#s5"><span class="num">05</span> 산출물 계약(24/31)</a>
+    <a href="#s6"><span class="num">06</span> 0~1 지표 산출근거 ★</a>
+    <a href="#s7"><span class="num">07</span> 출처등급·키워드필터</a>
+    <a href="#s8"><span class="num">08</span> 매매권한·하드리스크</a>
+    <a href="#s9"><span class="num">09</span> Item맵·온톨로지</a>
+    <a href="#s10"><span class="num">10</span> 코드 vs LLM</a>
+    <a href="#s11"><span class="num">11</span> 저장·증분·백테스트</a>
+    <a href="#s12"><span class="num">12</span> 최근개선·알려진갭</a>
+    <a href="#s13"><span class="num">13</span> 실행·진입점</a>
+  </nav>
+</aside>
+
+<header>
+  <div class="wrap">
+    <div class="badge-row">
+      <span class="badge green">정보분석 파트 ①공시 ②뉴스</span>
+      <span class="badge blue">Python · Pydantic AI · SEC EDGAR · Google News</span>
+      <span class="badge">LLM = OpenAI gpt-4o-mini</span>
+    </div>
+    <h1>정보분석(공시·뉴스) <span class="grad">개발 보고서</span></h1>
+    <p class="subtitle">SEC 공시와 실시간 뉴스를 구조화 신호로 바꿔 Strategist에게 넘기는 파트의 전체 기능·데이터 흐름과, <b>모든 결과값(특히 0~1 지표)의 산출 기준·근거·수치</b>를 코드/공식/config 값까지 정리한 개발자용 문서.</p>
+    <div class="meta">
+      <span>담당 <b>정창욱 · collector-agent</b></span>
+      <span>산출물 <b>DisclosureBundle · NewsBundle</b></span>
+      <span>범위 <b>수집→해석→구조화→보수적 1차 권한</b></span>
+      <span>문서일 <b>2026-07-03</b></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- 1 -->
+<section id="s1">
+  <div class="sec-label">Position</div>
+  <h2>파이프라인에서 내 위치</h2>
+  <p class="sec-desc">Quantinue는 여러 전문 에이전트의 파이프라인이다. 정보분석 파트는 <b>맨 앞 — 사실 수집·해석 단계</b>로, 종목당 <code>DisclosureBundle</code>·<code>NewsBundle</code> 두 객체를 만들어 ⑤ Strategist(이은미)에게 넘긴다.</p>
+  <div class="pipeline">
+    <div class="pipe mine"><span class="n">①</span><span class="nm">공시 분석</span></div>
+    <div class="pipe mine"><span class="n">②</span><span class="nm">뉴스 분석</span></div>
+    <div class="pipe"><span class="n">⑤</span><span class="nm">Strategist</span></div>
+    <div class="pipe"><span class="n">⑥</span><span class="nm">Risk Critic</span></div>
+    <div class="pipe"><span class="n">⑦</span><span class="nm">PM(비중)</span></div>
+    <div class="pipe"><span class="n">⑧</span><span class="nm">리스크 게이트</span></div>
+    <div class="pipe"><span class="n">⑨</span><span class="nm">실행·백테스트</span></div>
+  </div>
+  <div class="call b"><b>경계</b> — 정보분석은 <b>"믿을 수 있는 사실을, 검증된 구조로, 보수적으로 요약"</b>까지. <b>실제 매수 확정·시장반응 검증·비중 계산은 하지 않는다</b>(Strategist 이후 몫). 대신 <b>안전장치(hard_block)는 이 단계에서 확정</b>해 뒤가 못 뒤집게 못 박는다.</p></div>
+  <div class="grid c3" style="margin-top:14px">
+    <div class="card"><h3>2</h3><p class="dim">담당 소스 축 — 공시·뉴스</p></div>
+    <div class="card"><h3>24 / 31</h3><p class="dim">Bundle 필드 수 (공시/뉴스)</p></div>
+    <div class="card"><h3>11 / 6</h3><p class="dim">이벤트 온톨로지 / 매매권한 단계</p></div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="s2">
+  <div class="sec-label">Architecture</div>
+  <h2>아키텍처 · 모듈 맵</h2>
+  <p class="sec-desc">공시·뉴스는 <b>판단 로직은 분리</b>(collector·analyzer·schema·policy 별도), <b>배관은 공유</b>(정규화 입력·최종권한 decision·저장 storage)한다. 코드 위치 기준.</p>
+  <div class="tbl"><table>
+    <tr><th>레이어</th><th>모듈</th><th>역할</th></tr>
+    <tr><td>공통</td><td><code>app/common/</code> schemas·llm_client·ontology·<b>analysis_bundle</b></td><td>NormalizedItem 정규화 · LLM 팩토리 · 공유 온톨로지 · <b>Bundle 산출(결과값 계산의 중심)</b></td></tr>
+    <tr><td>수집</td><td><code>app/collectors/</code> sec_collector·sec_xbrl_collector·sec_form4_collector·news_collector</td><td>8-K 본문·Item / 10-Q·K XBRL 수치 / Form4 XML / Google News RSS</td></tr>
+    <tr><td>라우팅</td><td><code>app/router/</code> form_type_router·form_8k_item_router</td><td>Form 종류 분기 / 8-K Item→기본값</td></tr>
+    <tr><td>정책</td><td><code>app/policies/</code> hard_risk_policy·source_trust_policy</td><td>하드리스크 키워드 / 출처 등급·키워드 사전필터</td></tr>
+    <tr><td>분석</td><td><code>app/analyzers/</code> disclosure_analyzer·news_analyzer·form4_scorer·prompts/</td><td>LLM 분석기 / Form4 코드 스코어링 / 프롬프트</td></tr>
+    <tr><td>스키마</td><td><code>app/schemas/</code> disclosure_analysis·news_analysis·xbrl_metrics·form4</td><td>LLM 출력 강제 스키마(DisclosureSignal·NewsSignal)</td></tr>
+    <tr><td>결정</td><td><code>app/decision/</code> trade_permission_policy</td><td>최종 매매권한 종합(가장 보수적 채택)</td></tr>
+    <tr><td>저장</td><td><code>app/storage/</code> db (SQLite)</td><td>disclosure_signals·news_signals·processed_filings·companies</td></tr>
+    <tr><td>운영</td><td><code>app/universe/</code>·<code>scheduler/</code>·<code>backtest/</code></td><td>유니버스 배치 · 메타증분 스케줄러 · 전방수익률 피드백</td></tr>
+    <tr><td>오케스트</td><td><code>pipeline.py</code>(공시)·<code>news_pipeline.py</code>(뉴스)</td><td>한 줄 관통 실행</td></tr>
+  </table></div>
+</section>
+
+<!-- 3 -->
+<section id="s3">
+  <div class="sec-label">Disclosure</div>
+  <h2>공시 파이프라인</h2>
+  <p class="sec-desc">핵심은 "공시=LLM 1개"가 아니라 <b>Form 종류마다 코드와 LLM 비중을 다르게</b> 쓰는 라우팅 엔진. <code>pipeline.py:run_disclosure_pipeline</code>.</p>
+  <div class="pipeline">
+    <div class="pipe"><span class="n">1</span><span class="nm">SEC 수집</span></div>
+    <div class="pipe"><span class="n">2</span><span class="nm">Form 라우팅</span></div>
+    <div class="pipe"><span class="n">3</span><span class="nm">코드/LLM 차등</span></div>
+    <div class="pipe"><span class="n">4</span><span class="nm">하드룰</span></div>
+    <div class="pipe"><span class="n">5</span><span class="nm">최종권한</span></div>
+    <div class="pipe mine"><span class="n">6</span><span class="nm">Bundle</span></div>
+  </div>
+  <div class="tbl"><table>
+    <tr><th>Form</th><th>코드가 하는 일</th><th>LLM이 하는 일</th></tr>
+    <tr><td><b>8-K</b> <span class="dim">수시공시</span></td><td><span class="tag code">코드</span> Item 번호로 event/중요도/권한 기본값 부여, 위험 Item 표시</td><td><span class="tag llm">LLM</span> 해당 Item 본문만 청킹해 해석</td></tr>
+    <tr><td><b>10-Q/10-K</b> <span class="dim">실적</span></td><td><span class="tag code">코드</span> XBRL API로 매출·EPS 확정수치 + YoY 계산. 본문 리스크문구 별도 스캔</td><td><span class="tag llm">LLM</span> 가이던스 뉘앙스만. <b>숫자 추출 금지</b></td></tr>
+    <tr><td><b>Form 4</b> <span class="dim">내부자거래</span></td><td><span class="tag code">코드 100%</span> XML 파싱 → 매수=호재·매도=약한악재·베스팅/세금=중립, 직급 가중</td><td class="dim">— 미사용</td></tr>
+  </table></div>
+  <div class="call w"><b>수집 = 메타레벨 증분</b> — 스케줄러는 <code>peek_recent_filings</code>로 submissions만 1회 보고 form별 최신 accession 확인. 이미 처리한 accession이면 <b>문서 다운로드·LLM·저장 전부 skip</b>. 비용의 대부분(문서+LLM)을 unchanged에서 원천 제거.</div>
+</section>
+
+<!-- 4 -->
+<section id="s4">
+  <div class="sec-label">News</div>
+  <h2>뉴스 파이프라인</h2>
+  <p class="sec-desc">공시는 "법적 도장 찍힌 사실", 뉴스는 <b>루머·펌프가 섞임</b> → <b>신뢰도·사실성 판정이 핵심</b>. <code>news_pipeline.py:run_news_pipeline</code>. 다층 방어로 LLM 비용 전에 노이즈를 거른다.</p>
+  <div class="pipeline">
+    <div class="pipe"><span class="n">1</span><span class="nm">RSS 수집</span></div>
+    <div class="pipe"><span class="n">2</span><span class="nm">출처 등급</span></div>
+    <div class="pipe"><span class="n">3</span><span class="nm">키워드 필터</span></div>
+    <div class="pipe"><span class="n">4</span><span class="nm">LLM 분석</span></div>
+    <div class="pipe"><span class="n">5</span><span class="nm">최종권한</span></div>
+    <div class="pipe mine"><span class="n">6</span><span class="nm">Bundle 집계</span></div>
+  </div>
+  <ul>
+    <li><b>조기 종료</b>: 출처 <code>BLOCK</code> 또는 키워드 <code>drop</code>이면 <b>LLM 호출 안 함</b>(<code>dropped=True</code>) — 비용 절감.</li>
+    <li><b>3겹 방어</b>: ① 사전필터(출처·키워드) → ② LLM <code>is_confirmed</code> 재판정 → ③ 집계 단계 <code>confidence</code> 감점.</li>
+    <li><b>여러 건 → 대표 1개 집계</b>: 뉴스 10건 덤프 금지. 신뢰가중으로 대표를 뽑고 점수는 집계(§6).</li>
+  </ul>
+</section>
+
+<!-- 5 -->
+<section id="s5">
+  <div class="sec-label">Contract</div>
+  <h2>산출물 계약 — DisclosureBundle(24) · NewsBundle(31)</h2>
+  <p class="sec-desc">정식 전달 = <b>JSON</b>(<code>model_dump_json()</code>). 모든 값이 숫자(0~1 float · 0/1 int · 카운트) 또는 짧은 문자열이라 파싱·검증 안정적. <code>to_prompt()</code>는 보조 텍스트. 공시·뉴스는 <b>완전 별개 2객체</b>(합치기는 Strategist).</p>
+  <h3>공통 식별 (두 Bundle)</h3>
+  <div class="tbl"><table>
+    <tr><th>필드</th><th>출처</th><th>내용</th></tr>
+    <tr><td><code>ticker</code></td><td><span class="tag v">스크리닝</span></td><td>대문자 티커</td></tr>
+    <tr><td><code>company_name</code></td><td><span class="tag sec">SEC</span></td><td>company_tickers.json 자동</td></tr>
+    <tr><td><code>category</code></td><td><span class="tag v">스크리닝</span></td><td>섹터/테마 — 그대로 통과(미가공)</td></tr>
+    <tr><td><code>as_of</code> · <code>created_at</code></td><td><span class="tag code">시스템</span></td><td>분석 기준일 / 레코드 생성 시각(초 포함, DB 생성일)</td></tr>
+    <tr><td><code>has_signal</code></td><td><span class="tag code">코드</span></td><td>0/1 — LLM 신호 유무</td></tr>
+    <tr><td><code>hard_block</code>·<code>hard_block_reason</code></td><td><span class="tag code">코드</span></td><td>0/1 매수 override(§8) · 사유</td></tr>
+    <tr><td><code>reason</code>·<code>verdict</code>·<code>summary</code>·<code>keywords</code></td><td><span class="tag llm">LLM</span></td><td>한 줄 근거 · 호재/악재 판정 문장 · 전문 3~4줄 · 키워드 5개 (모두 <b>영어</b>)</td></tr>
+    <tr><td><code>event_type</code></td><td><span class="tag llm">LLM</span>+<span class="tag code">코드</span></td><td>통일 11종(§9)</td></tr>
+    <tr><td><code>fact_check</code></td><td><span class="tag code">코드</span></td><td>팩트체크 한 문장(§6)</td></tr>
+  </table></div>
+  <h3>공시 전용</h3>
+  <div class="tbl"><table>
+    <tr><th>필드</th><th>출처</th><th>내용</th></tr>
+    <tr><td><code>filing_title</code>·<code>filing_no</code>·<code>filed_at</code></td><td><span class="tag sec">SEC</span></td><td>제목 · 공시번호(accession) · <b>업로드 일시(초 포함, acceptanceDateTime)</b></td></tr>
+    <tr><td>점수(0~1)</td><td><span class="tag code">코드</span></td><td><code>sentiment_score · importance · risk_score · confidence · confirmed_score(=1.0)</code> · <code>sentiment</code>(라벨) · <code>ref</code></td></tr>
+  </table></div>
+  <h3>뉴스 전용 (대표 기사 + 집계)</h3>
+  <div class="tbl"><table>
+    <tr><th>필드</th><th>출처</th><th>내용</th></tr>
+    <tr><td><code>news_title</code>·<code>source</code>·<code>published_at</code></td><td><span class="tag rss">RSS</span></td><td><b>대표 기사</b> 제목 · 언론사 · 발행일시(초 포함)</td></tr>
+    <tr><td><code>news_count</code>·<code>news_confirmed</code>·<code>news_rumor</code></td><td><span class="tag code">코드</span></td><td>분석 건수 · 확정 · 루머</td></tr>
+    <tr><td>점수(0~1)</td><td><span class="tag code">코드</span></td><td><code>sentiment_score·importance·peak_importance·risk_score·confidence·source_trust·grade_score·confirmed_score</code></td></tr>
+    <tr><td><code>top_evidence</code></td><td><span class="tag code">코드</span></td><td>대표 근거 헤드라인</td></tr>
+  </table></div>
+</section>
+
+<!-- 6 -->
+<section id="s6">
+  <div class="sec-label">★ Scoring</div>
+  <h2>0~1 지표 산출 근거 (핵심)</h2>
+  <p class="sec-desc">모든 점수는 <b>0~1 소수 2자리</b>. 아래가 "이 숫자가 어떻게/왜 나오는가"의 단일 진실원천. 코드: <code>app/common/analysis_bundle.py</code>.</p>
+
+  <h3>6-1. 정규화 · 상수</h3>
+  <div class="tbl"><table>
+    <tr><th>항목</th><th>규칙</th><th>값</th></tr>
+    <tr><td><code>_n10(v)</code></td><td>LLM 0~10 척도 → 0~1</td><td><code>clamp(v,0,10)/10</code>, 2자리</td></tr>
+    <tr><td><code>certainty → confidence</code></td><td>모호성 수치화</td><td>High <b>0.9</b> · Medium <b>0.6</b> · Low <b>0.3</b> (없으면 0.5)</td></tr>
+    <tr><td><code>grade_score</code> 매핑</td><td>출처 정책등급→점수</td><td>ALLOW <b>1.0</b> · GRAY <b>0.6</b> · BLOCK <b>0.0</b></td></tr>
+  </table></div>
+
+  <h3>6-2. sentiment_score — 방향(0=강악재·0.5=중립·1=강호재)</h3>
+  <p><b>비대칭 신뢰 감쇠</b>: 호재(+)만 confidence로 중립쪽 감쇠, 악재(−)는 유지(경고를 흐리지 않는 보수 원칙).</p>
+  <pre><code><span class="cm"># signed = 방향부호 × 강도(-1~+1)</span>
+<span class="kw">if</span> signed &gt; 0:                 <span class="cm"># 호재만 감쇠</span>
+    signed = signed × confidence
+sentiment_score = 0.5 + 0.5 × signed
+
+_senti_score(+1.0, conf=1.0) = <span class="nm2">1.00</span>   <span class="cm"># 확신 호재</span>
+_senti_score(+1.0, conf=0.2) = <span class="nm2">0.60</span>   <span class="cm"># 저신뢰 호재 → 중립쪽으로 눌림</span>
+_senti_score(-1.0, conf=0.2) = <span class="nm2">0.00</span>   <span class="cm"># 저신뢰 악재 → 감쇠 없음</span></code></pre>
+
+  <h3>6-3. 뉴스 신뢰가중 집계 (여러 건 → 대표/점수)</h3>
+  <p>기사별 신뢰도(가중치)로 가중 평균한다. "루머 10건 &lt; 확정 1건".</p>
+  <pre><code><span class="cm"># 기사별 가중치 (_news_conf)</span>
+weight = certainty(.9/.6/.3) × (1.0 <span class="kw">if</span> is_confirmed <span class="kw">else</span> 0.5) × source_trust(0~1)
+<span class="cm"># ★ source_trust=0.0(무신뢰)을 1.0으로 오인하지 않음 (None만 1.0 폴백)</span></code></pre>
+  <div class="tbl"><table>
+    <tr><th>결과 필드</th><th>산출식 · 근거</th></tr>
+    <tr><td><code>importance</code></td><td><b>부호 없는 강도의 신뢰가중 평균</b> — <b>방향과 독립</b>. 호·악재 섞여도 상쇄되지 않아 같은 강도면 항상 같은 값. (전부 저신뢰=가중치 0이면 등가중 폴백으로 붕괴 방지)</td></tr>
+    <tr><td><code>peak_importance</code></td><td>집계 전 최고 강도 <code>max(_n10(importance))</code></td></tr>
+    <tr><td><code>agg_signed</code>(방향)</td><td>기사별 <code>강도×부호</code>의 신뢰가중 평균. 단 <b>강한 악재(min ≤ −0.7) 1건이라도 있으면 그 값 채택</b>(보수)</td></tr>
+    <tr><td><code>sentiment_score</code></td><td><code>_senti_score(agg_signed, confidence)</code></td></tr>
+    <tr><td><code>sentiment</code>(라벨)</td><td><b>sentiment_score에서 파생</b>(라벨↔점수 항상 일치): 강한악재→negative · 호·악재 각 신뢰가중 ≥30%→<b>mixed</b> · 그외 &gt;.5=positive/&lt;.5=negative/=.5=neutral</td></tr>
+    <tr><td><code>risk_score·source_trust·grade_score</code></td><td>기사별 값의 신뢰가중 평균</td></tr>
+    <tr><td><code>confidence</code></td><td>기사별 가중치의 <b>단순 평균</b>(루머 많으면 급락)</td></tr>
+    <tr><td><code>confirmed_score</code></td><td>확정 비율 = <code>news_confirmed / news_count</code></td></tr>
+    <tr><td><b>대표 기사</b></td><td><code>importance × weight</code>(신뢰가중) 최대 → 시끄러운 루머가 헤드라인 안 되게</td></tr>
+  </table></div>
+  <div class="call g"><b>공시 점수</b> — 단일 신호라 집계 없음. <code>importance=_n10(LLM)</code> · <code>confidence=certainty매핑</code> · <code>confirmed_score=1.0</code>(법적 제출=사실) · <code>sentiment_score=_senti_score(부호×importance, confidence)</code>.</div>
+
+  <h3>6-4. fact_check — 팩트체크 판정(코드, LLM 무관)</h3>
+  <div class="tbl"><table>
+    <tr><th>판정</th><th>조건(경계)</th></tr>
+    <tr><td><span class="tag g">공시</span> Verified</td><td>항상 — <code>"Verified — official SEC filing (legally binding fact)."</code></td></tr>
+    <tr><td><span class="tag g">Verified</span></td><td>뉴스: <code>ratio ≥ 0.5</code> 그리고 <code>source_trust ≥ 0.6</code> (ratio=확정/전체)</td></tr>
+    <tr><td><span class="tag r">Unverified (rumor)</span></td><td><code>confirmed == 0</code> 또는 <code>source_trust &lt; 0.4</code></td></tr>
+    <tr><td><span class="tag" style="background:var(--gold-soft);color:var(--gold)">Partially verified</span></td><td>그 외</td></tr>
+  </table></div>
+</section>
+
+<!-- 7 -->
+<section id="s7">
+  <div class="sec-label">Source Policy</div>
+  <h2>출처 등급 3단계 · 키워드 사전필터</h2>
+  <p class="sec-desc">뉴스는 LLM 전에 <b>출처 등급 + 키워드</b> 두 관문. <code>config/news_trust_policy.yaml</code> · <code>news_keyword_filter.yaml</code>. <b>WATCH_ONLY 소셜 등급은 팀 결정으로 제거</b>(3단계).</p>
+  <div class="tbl"><table>
+    <tr><th>등급</th><th>grade_score</th><th>취급</th><th>도메인</th></tr>
+    <tr><td><span class="perm p1">ALLOW</span></td><td>1.0</td><td>분석 반영 가능</td><td>sec·nasdaq·nyse·finra·fda·reuters·bloomberg·wsj·apnews·cnbc·marketwatch·barrons·ft·businesswire·prnewswire·globenewswire</td></tr>
+    <tr><td><span class="perm p2">GRAY</span></td><td>0.6</td><td>단독 매수금지·교차확인 시 감점</td><td>benzinga·seekingalpha·fool·investorplace·zacks·thestreet·tipranks <b>+ 소셜·미등록 전부</b></td></tr>
+    <tr><td><span class="perm p4">BLOCK</span></td><td>0.0</td><td>즉시 drop(LLM 스킵)</td><td>sponsored/paid promotion·guaranteed profit·원출처 없음</td></tr>
+  </table></div>
+  <div class="call w"><b>ALLOW ≠ 매수허용</b> — "분석 반영 가능"일 뿐. 미등록 도메인은 보수적 기본 <b>GRAY</b>. <code>grade_score</code>(정책등급)와 <code>source_trust</code>(LLM 판단)는 <b>별도 축</b>으로 분리 노출.</div>
+  <h3>키워드 필터 (화이트 우선 → false negative 방지)</h3>
+  <div class="grid c2">
+    <div class="card"><h3 style="color:var(--accent)">whitelist (우선 통과)</h3>
+      <p class="dim">shareholder_return: buyback·repurchase·special dividend·guidance raised<br>ma: acquisition·buyout·merger·strategic partnership·spin-off<br>approval_milestone: fda approval·fda cleared·clinical trial success·patent granted</p></div>
+    <div class="card"><h3 style="color:var(--red)">blacklist (drop → LLM 스킵)</h3>
+      <p class="dim">legal_ad_noise: class action·investor alert·shareholder alert·deadline<br>speculation: reportedly·sources say·people familiar with·rumor<br>clickbait: why shares are·time to buy·stocks to watch·best/top picks</p></div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section id="s8">
+  <div class="sec-label">Permission</div>
+  <h2>매매권한 6단계 · 하드리스크</h2>
+  <p class="sec-desc">공통 <code>decision/trade_permission_policy.py</code>. 하드룰·LLM·Item기본 중 <b>가장 제한적(보수적)</b> 권한을 채택. <code>hard_block=1</code> ⇔ 최종권한 ∈ {BLOCK_ALL, BLOCK_BUY}.</p>
+  <div class="grid c2">
+    <div class="card"><h3>권한 6단계(제한도)</h3>
+      <div class="kv"><b>BLOCK_ALL</b><span>6 · 매수·보유 모두 위험</span></div>
+      <div class="kv"><b>BLOCK_BUY</b><span>5 · 신규 매수 차단</span></div>
+      <div class="kv"><b>RISK_REDUCE</b><span>4 · 보유 축소</span></div>
+      <div class="kv"><b>WATCH_ONLY</b><span>3 · 관찰만</span></div>
+      <div class="kv"><b>..._SMALL_SIZE</b><span>2 · 소액</span></div>
+      <div class="kv"><b>TRADE_ELIGIBLE</b><span>1 · 매수 후보</span></div>
+    </div>
+    <div class="card"><h3>종합 규칙</h3>
+      <ul>
+        <li>후보 중 <b>제한도 max</b> 채택(안전 우선)</li>
+        <li>하드룰 있으면 항상 후보 포함</li>
+        <li><b>시장반응 미확인 시 매수계열(1·2)→WATCH_ONLY 강등</b> — MVP는 항상 미확인이라 이 파트는 매수를 스스로 확정하지 않음</li>
+        <li>후보 없으면 기본 WATCH_ONLY</li>
+      </ul>
+    </div>
+  </div>
+  <h3>하드리스크 키워드 (LLM보다 우선, 본문 스캔)</h3>
+  <div class="tbl"><table>
+    <tr><th>유형</th><th>키워드(일부)</th><th>강제 권한</th><th>risk_score_min</th></tr>
+    <tr><td>거래정지</td><td>trading halt · suspension</td><td><span class="perm p6">BLOCK_ALL</span></td><td>10.0</td></tr>
+    <tr><td>파산·계속기업</td><td>bankruptcy · chapter 11 · going concern</td><td><span class="perm p4">BLOCK_BUY</span></td><td>9.5</td></tr>
+    <tr><td>상장폐지</td><td>delisting notice · non-compliance</td><td><span class="perm p4">BLOCK_BUY</span></td><td>9.0</td></tr>
+    <tr><td>회계문제</td><td>restatement · accounting irregularity · material weakness</td><td><span class="perm p4">BLOCK_BUY</span></td><td>8.5</td></tr>
+    <tr><td>감사인/희석</td><td>auditor resignation · secondary/ATM offering · convertible notes</td><td><span class="perm p4">BLOCK_BUY</span></td><td>8.0</td></tr>
+  </table></div>
+</section>
+
+<!-- 9 -->
+<section id="s9">
+  <div class="sec-label">Ontology</div>
+  <h2>8-K Item 맵 · event_type 온톨로지</h2>
+  <p class="sec-desc"><code>config/item_event_map.yaml</code> — 8-K는 본문 전에 Item 번호로 기본값 부여. <code>hard_risk</code> 표시는 위험 신호(단, 현재 권한 자동반영은 <code>default_permission</code>만 — §12 갭 참고).</p>
+  <div class="tbl"><table>
+    <tr><th>Item</th><th>event_type</th><th>기본 중요도</th><th>기본 권한</th><th>hard_risk</th></tr>
+    <tr><td>1.01 중요계약</td><td>material_agreement</td><td>6.5</td><td><span class="perm p3">WATCH_ONLY</span></td><td>—</td></tr>
+    <tr><td>2.01 인수·처분</td><td>ma</td><td>7.0</td><td><span class="perm p3">WATCH_ONLY</span></td><td>—</td></tr>
+    <tr><td>2.02 실적</td><td>earnings</td><td>7.5</td><td><span class="perm p3">WATCH_ONLY</span></td><td>—</td></tr>
+    <tr><td>2.06 손상차손</td><td>other</td><td>7.5</td><td><span class="perm p3">WATCH_ONLY</span></td><td>✔ 표시</td></tr>
+    <tr><td>3.01 상장폐지</td><td>delisting_halt</td><td>9.5</td><td><span class="perm p4">BLOCK_BUY</span></td><td>✔</td></tr>
+    <tr><td>4.01 감사인 변경</td><td>other</td><td>8.5</td><td><span class="perm p4">BLOCK_BUY</span></td><td>✔</td></tr>
+    <tr><td>5.02 임원 변경</td><td>management_change</td><td>6.5</td><td><span class="perm p3">WATCH_ONLY</span></td><td>—</td></tr>
+    <tr><td>8.01 / 기본값</td><td>other</td><td>4.0 / 3.0</td><td><span class="perm p3">WATCH_ONLY</span></td><td>—</td></tr>
+  </table></div>
+  <h3>event_type 11종 (공시·뉴스 공유 · <code>ontology.py</code>)</h3>
+  <div class="card"><p style="font-family:var(--mono);font-size:13px;color:var(--violet);margin:0;line-height:1.9">earnings · guidance_change · ma · capital_raise · management_change · insider_trade · product_deal · analyst_rating · regulation_legal · delisting_halt · other</p></div>
+</section>
+
+<!-- 10 -->
+<section id="s10">
+  <div class="sec-label">Boundary</div>
+  <h2>코드 vs LLM — 무엇을 누가 결정하나</h2>
+  <p class="sec-desc">핵심 원칙: <b>코드 = 사실, LLM = 해석만</b>. 텍스트에서 숫자 추출은 환각 위험이라 금지. 안전장치는 코드가, 뉘앙스는 LLM이.</p>
+  <div class="grid c2">
+    <div class="card"><h3><span class="tag code">코드</span> 가 확정</h3><ul>
+      <li>수치(XBRL 매출·EPS·YoY) · Form4 스코어링 · Item 기본값</li>
+      <li>하드리스크 키워드 → 권한 강제</li>
+      <li>출처 등급 · 키워드 사전필터 · 최종권한 종합</li>
+      <li><b>모든 0~1 지표 계산</b> · fact_check · 신뢰가중 집계 · 대표 선정</li>
+      <li>증분 판정 · 저장 · 전방수익률</li>
+    </ul></div>
+    <div class="card"><h3><span class="tag llm">LLM</span> 은 해석만</h3><ul>
+      <li>8-K 본문/뉴스 헤드라인의 event_type·sentiment·importance(0~10)·risk_score</li>
+      <li><code>is_confirmed</code>(확정/추측) · <code>source_trust</code>(0~1)</li>
+      <li>reason · verdict · summary · keywords (영어)</li>
+      <li>추론강제: <code>reasoning</code>(CoT) → <code>certainty_level</code> 순서로 사고</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section id="s11">
+  <div class="sec-label">Storage</div>
+  <h2>저장 · 증분 · 백테스트</h2>
+  <p class="sec-desc">SQLite <code>data/quantinue.sqlite</code>. 백테스트·감사·증분의 토대.</p>
+  <div class="tbl"><table>
+    <tr><th>테이블</th><th>용도</th><th>핵심 컬럼</th></tr>
+    <tr><td><code>disclosure_signals</code></td><td>공시 신호 저장</td><td>event_type·sentiment·importance·risk·certainty·<b>filed_at·accepted_at·title·verdict·summary·keywords</b>·return_1/3/5d·outcome</td></tr>
+    <tr><td><code>news_signals</code></td><td>뉴스 신호(드롭 포함)</td><td>news_key(=google_link, UNIQUE)·source·source_grade·is_confirmed·source_trust·verdict·summary·keywords·return_*</td></tr>
+    <tr><td><code>processed_filings</code></td><td>메타증분</td><td>accession(PK, form 무관)</td></tr>
+    <tr><td><code>companies</code></td><td>유니버스</td><td>ticker·cik·market_cap·sector·priority·active·last_accession</td></tr>
+  </table></div>
+  <ul>
+    <li><b>증분</b>: <code>processed_filings.accession</code>으로 처리 여부 판정 → 새 건만 문서 다운로드·LLM. 뉴스 dedup 키 = <code>google_link</code>(기사별 유니크, url 도메인 아님).</li>
+    <li><b>백테스트</b>: Yahoo chart로 +1/3/5 거래일 수익률 채움. day0 = <code>COALESCE(filed_at, analyzed_at)</code>(공시) / <code>published_at</code>(뉴스). outcome=센티먼트 방향 적중. <b>가중치 자동조정은 안 함</b>(과적합 방지, 측정·리포트까지만).</li>
+  </ul>
+</section>
+
+<!-- 12 -->
+<section id="s12">
+  <div class="sec-label">Recent · Gaps</div>
+  <h2>최근 개선 · 알려진 갭</h2>
+  <h3>0~1 지표 정확·일관화 (2026-07-03)</h3>
+  <div class="tbl"><table>
+    <tr><th>수정</th><th>내용</th></tr>
+    <tr><td>importance 방향 독립</td><td>구 <code>|agg_signed|</code>는 호·악재 섞이면 0으로 <b>붕괴</b> → 부호 없는 강도의 신뢰가중 평균으로. 같은 강도면 항상 같은 값</td></tr>
+    <tr><td>라벨↔점수 일치</td><td><code>sentiment</code>을 최종 <code>sentiment_score</code>에서 파생 + 진짜 충돌이면 <b>mixed</b></td></tr>
+    <tr><td>source_trust=0 버그</td><td><code>source_trust or 1.0</code>이 0.0(무신뢰)을 1.0으로 오인 → 명시적 None 검사</td></tr>
+    <tr><td>저신뢰 붕괴 방지</td><td>가중치 전부 0이면 등가중 폴백(강도 유지, confidence는 정직하게 낮게)</td></tr>
+    <tr><td>peak 이중정규화</td><td><code>_n10(max(mags))</code> → <code>max(mags)</code></td></tr>
+  </table></div>
+  <div class="call r"><b>알려진 갭 (Phase 2)</b> — ① <code>item_event_map</code>의 <code>hard_risk:true</code> 플래그는 <code>route_item</code>이 반환하나 <code>decide_final_permission</code>이 소비 안 함 → 2.06은 현재 자동 차단 안 됨(권한 반영 결정 필요). ② event_type=other 빈발(온톨로지 정교화). ③ XBRL 컨센서스 Surprise(유료 보류) · sector 미채움.</div>
+</section>
+
+<!-- 13 -->
+<section id="s13">
+  <div class="sec-label">Run</div>
+  <h2>실행 · 진입점</h2>
+  <pre><code><span class="cm"># 단건 번들 (공시+뉴스 → Strategist 입력)</span>
+python run_bundle.py --ticker NVDA --category "Semiconductors" --llm --json
+
+<span class="cm"># 스크리닝 배치 (50종목 JSON 입력 → 유니버스 적재 + 번들 생성)</span>
+python run_screening_input.py --file screening_input.json --run --llm --json
+
+<span class="cm"># 수집 스케줄러 (메타증분: 새 accession만 문서·LLM)</span>
+python run_scheduler.py --once --limit 50 --forms 8-K,10-Q --news --llm --save
+
+<span class="cm"># 백테스트 (전방수익률·성과 리포트)</span>
+python run_backtest.py --fill --report</code></pre>
+  <div class="call b"><b>관련 문서</b> — 필드 사전 <code>결과값_필드_레퍼런스.html</code> · 계약 <code>데이터스키마_인터페이스명세_v2</code> · 상세설계 <code>공시/뉴스_상세설계서.html</code> · 결과 예시 <code>전략가_전달_예시_10건.json</code></div>
+</section>
+
+</div>
+<footer><div class="wrap">Quantinue · 정보분석(공시·뉴스) 개발 보고서 · 정창욱(collector-agent) · 2026-07-03<br>
+근거 코드: <code>app/common/analysis_bundle.py</code> · <code>app/policies/*</code> · <code>app/decision/trade_permission_policy.py</code> · <code>config/*.yaml</code> · <code>app/collectors/*</code> · <code>app/storage/db.py</code></div></footer>
+</body>
+</html>
