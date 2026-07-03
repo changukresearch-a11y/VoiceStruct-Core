@@ -42,6 +42,15 @@ Strategist 전달 계약(구 `AnalysisBundle`)을 팀 회의 피드백으로 대
 `app/collectors/sec_collector.py` · `app/pipeline.py` · `app/storage/db.py`.
 엔트리 `run_bundle.py`(단건) / `run_screening_input.py`(스크리닝 배치).
 
+- **0~1 지표 산출 정확·일관화 (07-03):** 뉴스 집계 버그·비일관성 수정.
+  ① `importance`를 **방향과 독립**한 부호 없는 강도의 신뢰가중 평균으로(구: `|agg_signed|`라
+     호·악재 섞이면 0으로 **붕괴**) → 같은 강도면 항상 같은 값. ② `sentiment` 라벨을
+     **`sentiment_score`에서 파생**해 라벨↔점수 항상 일치 + 진짜 충돌이면 `mixed`.
+  ③ **`_news_conf` 버그 수정** — `source_trust or 1.0`이 `source_trust=0.0`(무신뢰)을
+     1.0으로 오인 → 명시적 None 검사로. ④ 전부 저신뢰(가중치 0)면 **등가중 폴백**(강도 붕괴 방지,
+     confidence는 정직하게 낮게). ⑤ `peak_importance` **이중 정규화 버그** 수정(`_n10(max(mags))`→`max(mags)`).
+  결과값 필드 레퍼런스 §4·§6 갱신.
+
 ---
 
 ## 1. 빠른 시작 (환경)

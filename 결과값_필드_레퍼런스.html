@@ -219,9 +219,9 @@
       <tr><td class="fname">news_confirmed</td><td>int</td><td><span class="src s-code">코드</span></td><td><code>is_confirmed=True</code> 건수(확정 사실)</td></tr>
       <tr><td class="fname">news_rumor</td><td>int</td><td><span class="src s-code">코드</span></td><td><code>news_count − news_confirmed</code>(추측/루머)</td></tr>
       <tr><td class="fname">event_type</td><td>11종 enum</td><td><span class="src s-llm">LLM</span>(대표)</td><td>대표 기사 event_type 정규화(§13)</td></tr>
-      <tr><td class="fname">sentiment</td><td>pos/neg/neutral</td><td><span class="src s-code">코드</span></td><td>집계 방향(<code>agg_signed</code>)의 부호(§6)</td></tr>
+      <tr><td class="fname">sentiment</td><td>pos/neg/neutral/mixed</td><td><span class="src s-code">코드</span></td><td><b>sentiment_score에서 파생</b> — 라벨↔점수 항상 일치. 호·악재 둘 다 유의미하면 mixed(§6)</td></tr>
       <tr><td class="fname">sentiment_score</td><td>0~1</td><td><span class="src s-code">코드</span></td><td>집계 방향×강도를 0~1로, 호재만 confidence 감쇠(§5·§6)</td></tr>
-      <tr><td class="fname">importance</td><td>0~1</td><td><span class="src s-code">코드</span></td><td><b>신뢰가중 평균 강도</b> = <code>|agg_signed|</code>(감쇠 없음)</td></tr>
+      <tr><td class="fname">importance</td><td>0~1</td><td><span class="src s-code">코드</span></td><td><b>부호 없는 강도의 신뢰가중 평균</b> — 방향과 독립(호·악재 섞여도 상쇄 안 됨)</td></tr>
       <tr><td class="fname">peak_importance</td><td>0~1</td><td><span class="src s-code">코드</span></td><td>집계 전 최고 잠재 강도 = <code>max(importance)/10</code>. "잠재 큰데 저신뢰라 눌린" 경우 병기용</td></tr>
       <tr><td class="fname">risk_score</td><td>0~1</td><td><span class="src s-code">코드</span></td><td>신뢰가중 평균</td></tr>
       <tr><td class="fname">confidence</td><td>0~1</td><td><span class="src s-code">코드</span></td><td>기사별 신뢰도(§6)의 <b>단순 평균</b>. 루머 많으면 급락</td></tr>
@@ -268,9 +268,10 @@ weight = certainty(High.9/Med.6/Low.3)
     <h3>6-2. 집계 규칙 (여러 건 → 대표/점수)</h3>
     <table>
       <tr><th>결과 필드</th><th>산출</th></tr>
-      <tr><td><code>agg_signed</code>(방향·강도)</td><td>기사별 <code>signed=강도×부호</code>의 <b>신뢰가중 평균</b>. 단 <b>강한 악재(가장 낮은 signed ≤ −0.7)가 1건이라도 있으면 그 값 채택</b>(보수)</td></tr>
+      <tr><td><code>importance</code>(강도)</td><td><b>부호 없는 강도(0~1)의 신뢰가중 평균</b> — 방향과 <b>독립</b> 산출. 호·악재가 섞여도 상쇄되지 않아 같은 강도면 항상 같은 값(일관성). 전부 저신뢰(가중치 0)면 등가중 폴백으로 붕괴 방지</td></tr>
+      <tr><td><code>agg_signed</code>(방향)</td><td>기사별 <code>signed=강도×부호</code>의 <b>신뢰가중 평균</b>. 단 <b>강한 악재(가장 낮은 signed ≤ −0.7) 1건이라도 있으면 그 값 채택</b>(보수)</td></tr>
       <tr><td><code>sentiment_score</code></td><td><code>_senti_score(agg_signed, confidence)</code> (§5)</td></tr>
-      <tr><td><code>importance</code></td><td><code>|agg_signed|</code> — 방향 뺀 크기, 감쇠 없음</td></tr>
+      <tr><td><code>sentiment</code>(라벨)</td><td><b>sentiment_score에서 파생</b>(라벨↔점수 일치): 강한 악재→<code>negative</code> · 호·악재 둘 다 신뢰가중 ≥30%→<code>mixed</code> · 그 외 &gt;0.5=positive·&lt;0.5=negative·=0.5=neutral</td></tr>
       <tr><td><code>risk_score</code>·<code>source_trust</code>·<code>grade_score</code></td><td>기사별 값의 <b>신뢰가중 평균</b></td></tr>
       <tr><td><code>confidence</code></td><td>기사별 weight의 <b>단순 평균</b>(루머 많으면 급락)</td></tr>
       <tr><td><b>대표 기사</b></td><td><code>importance × weight</code>(신뢰가중)가 <b>최대</b>인 기사 → event_type·verdict·summary·keywords·news_title·source 등이 이 기사</td></tr>

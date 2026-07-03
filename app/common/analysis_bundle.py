@@ -264,7 +264,8 @@ def build_disclosure_bundle(ticker: str, as_of: str, disclosure_result: Any = No
 def _news_conf(sig: Any) -> float:
     c = _CERTAINTY.get(getattr(sig, "certainty_level", None), 0.5)
     c *= 1.0 if getattr(sig, "is_confirmed", False) else 0.5
-    c *= getattr(sig, "source_trust", 1.0) or 1.0
+    st = getattr(sig, "source_trust", None)
+    c *= st if st is not None else 1.0   # 0.0(무신뢰)을 1.0으로 오인 금지(‘or’ 버그)
     return max(0.0, min(1.0, c))
 
 
@@ -292,19 +293,37 @@ def build_news_bundle(ticker: str, as_of: str, news_results: list | None = None,
     b.news_rumor = len(analyzed) - confirmed
     b.news_count = len(analyzed)
 
-    weights = [_news_conf(r.signal) for r in analyzed]
-    tw = sum(weights) or 1.0
-    # 방향 포함 강도 (-1~+1) — 집계에만 쓰고, 최종은 방향(sentiment)/강도(importance) 분리
-    signed = [_n10(r.signal.importance) * _sign(r.signal.sentiment) for r in analyzed]
-    agg_signed = (min(signed) if min(signed) <= -0.7
+    # 기사별 신뢰도(가중치). confidence는 이 원본 가중치의 평균(저신뢰면 낮게).
+    raw_weights = [_news_conf(r.signal) for r in analyzed]
+    b.confidence = round(sum(raw_weights) / len(raw_weights), 2)
+    # 가중평균용 가중치: 전부 0(완전 저신뢰)이면 등가중 폴백 — 강도·위험 지표가
+    # 0으로 붕괴하는 것을 막는다(신뢰는 위 confidence가 이미 낮게 반영).
+    weights = raw_weights if sum(raw_weights) > 1e-9 else [1.0] * len(analyzed)
+    tw = sum(weights)
+
+    mags = [_n10(r.signal.importance) for r in analyzed]       # 강도(부호 없음, 0~1)
+    signed = [m * _sign(r.signal.sentiment)                    # 방향×강도(-1~+1)
+              for m, r in zip(mags, analyzed)]
+
+    # 강도(importance): 방향과 무관한 신뢰가중 평균 — 호·악재가 섞여도 상쇄되지 않아
+    # 같은 강도면 방향 구성과 무관하게 항상 같은 값이 나온다(일관성).
+    b.importance = round(sum(m * w for m, w in zip(mags, weights)) / tw, 2)
+    b.peak_importance = max(mags)   # mags는 이미 0~1(_n10 적용됨) — 재정규화 금지
+
+    # 방향(sentiment): 강도와 별도 집계. 강한 악재(≤ −0.7) 1건이면 보수적으로 그쪽.
+    strong_neg = min(signed) <= -0.7
+    agg_signed = (min(signed) if strong_neg
                   else sum(s * w for s, w in zip(signed, weights)) / tw)
-    b.confidence = round(sum(weights) / len(weights), 2)
-    b.sentiment = ("positive" if agg_signed > 0
-                   else "negative" if agg_signed < 0 else "neutral")
-    # 방향점수: 호재는 집계 confidence로 감쇠(루머뿐이면 방향을 덜 단정), 악재는 유지
+    # 방향점수: 호재는 confidence로 감쇠(루머뿐이면 방향을 덜 단정), 악재는 유지
     b.sentiment_score = _senti_score(agg_signed, b.confidence)
-    b.importance = round(abs(agg_signed), 2)          # 방향 뺀 강도(감쇠 없음)
-    b.peak_importance = _n10(max(r.signal.importance or 0 for r in analyzed))
+    pos_w = sum(w for s, w in zip(signed, weights) if s > 0)
+    neg_w = sum(w for s, w in zip(signed, weights) if s < 0)
+    # 라벨은 최종 sentiment_score에서 파생 — 항상 같은 방향을 가리킨다(라벨↔점수 일관).
+    b.sentiment = (
+        "negative" if strong_neg else                          # 강한 악재 우선(보수)
+        "mixed" if min(pos_w, neg_w) / tw >= 0.30 else          # 호·악재 둘 다 유의미
+        "positive" if b.sentiment_score > 0.5 else
+        "negative" if b.sentiment_score < 0.5 else "neutral")
     b.risk_score = round(
         sum(_n10(r.signal.risk_score) * w for r, w in zip(analyzed, weights)) / tw, 2)
     b.source_trust = round(
