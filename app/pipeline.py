@@ -69,6 +69,8 @@ def run_disclosure_pipeline(ticker: str, form_type: str = "8-K",
                     item.meta.setdefault("accession_no", rmeta.get("accession_no"))
                     if rmeta.get("filed_at"):
                         item.meta["filed_at"] = rmeta["filed_at"]  # 제출일 더 정확
+                    if rmeta.get("accepted_at"):
+                        item.meta["accepted_at"] = rmeta["accepted_at"]  # 초 포함 시각
                 if text:
                     result.hard_risk = check_hard_risk(text)
                     if result.hard_risk:

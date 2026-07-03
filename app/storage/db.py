@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS disclosure_signals (
   certainty TEXT,
   hard_risk_flag INTEGER, hard_risk_type TEXT,
   llm_permission TEXT, final_permission TEXT, final_reason TEXT,
-  reason TEXT, accession_no TEXT, url TEXT,
+  reason TEXT, verdict TEXT, summary TEXT, keywords TEXT,
+  accession_no TEXT, accepted_at TEXT, title TEXT, url TEXT,
   return_1d REAL, return_3d REAL, return_5d REAL, outcome TEXT
 );
 
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS news_signals (
   event_type TEXT, sentiment TEXT, importance INTEGER, risk_score REAL,
   certainty TEXT, is_confirmed INTEGER, source_trust REAL,
   llm_permission TEXT, final_permission TEXT, final_reason TEXT, reason TEXT,
+  verdict TEXT, summary TEXT, keywords TEXT,
   return_1d REAL, return_3d REAL, return_5d REAL, outcome TEXT
 );
 """
@@ -56,6 +58,7 @@ _NEWS_COLS = [
     "dropped", "event_type", "sentiment", "importance", "risk_score",
     "certainty", "is_confirmed", "source_trust",
     "llm_permission", "final_permission", "final_reason", "reason",
+    "verdict", "summary", "keywords",
 ]
 
 _COLS = [
@@ -63,15 +66,25 @@ _COLS = [
     "event_type", "sentiment", "importance", "risk_score", "certainty",
     "hard_risk_flag", "hard_risk_type",
     "llm_permission", "final_permission", "final_reason",
-    "reason", "accession_no", "url",
+    "reason", "verdict", "summary", "keywords",
+    "accession_no", "accepted_at", "title", "url",
 ]
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
     """기존 DB에 없는 컬럼을 보강(ADD COLUMN). CREATE IF NOT EXISTS로는 안 붙음."""
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(disclosure_signals)")}
-    if "filed_at" not in cols:
-        conn.execute("ALTER TABLE disclosure_signals ADD COLUMN filed_at TEXT")
+    def _cols(t: str) -> set:
+        return {r[1] for r in conn.execute(f"PRAGMA table_info({t})")}
+    dcols = _cols("disclosure_signals")
+    for c in ("filed_at", "accepted_at", "title"):   # 공시 원문 식별 보강
+        if c not in dcols:
+            conn.execute(f"ALTER TABLE disclosure_signals ADD COLUMN {c} TEXT")
+    # 요약·키워드·판정 (두 테이블 공통) — 기존 DB 보강
+    for t in ("disclosure_signals", "news_signals"):
+        existing = _cols(t)
+        for c in ("verdict", "summary", "keywords"):
+            if c not in existing:
+                conn.execute(f"ALTER TABLE {t} ADD COLUMN {c} TEXT")
 
 
 def _conn() -> sqlite3.Connection:
@@ -106,7 +119,12 @@ def save_disclosure(result: Any) -> int:
         "final_permission": result.final_permission,
         "final_reason": result.final_reason,
         "reason": getattr(sig, "reason", None),
+        "verdict": getattr(sig, "verdict", None),
+        "summary": getattr(sig, "summary", None),
+        "keywords": ", ".join(getattr(sig, "keywords", []) or []) or None,
         "accession_no": meta.get("accession_no"),
+        "accepted_at": meta.get("accepted_at"),
+        "title": result.item.title,
         "url": result.item.url,
     }
     placeholders = ", ".join("?" for _ in _COLS)
@@ -203,6 +221,9 @@ def save_news(result: Any) -> int | None:
         "final_permission": result.final_permission,
         "final_reason": result.final_reason,
         "reason": getattr(sig, "reason", None),
+        "verdict": getattr(sig, "verdict", None),
+        "summary": getattr(sig, "summary", None),
+        "keywords": ", ".join(getattr(sig, "keywords", []) or []) or None,
     }
     placeholders = ", ".join("?" for _ in _NEWS_COLS)
     with _conn() as conn:

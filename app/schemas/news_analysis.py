@@ -55,3 +55,12 @@ class NewsSignal(BaseModel):
 
     reason: str = Field(..., description="한 줄 핵심 근거.")
     evidence_quotes: list[str] = Field(default_factory=list)
+
+    # ── 전문 요약·키워드·판정 ──
+    summary: str = Field(
+        "", description="뉴스 전문(헤드라인+본문)을 3~4줄로 요약.")
+    keywords: list[str] = Field(
+        default_factory=list, description="핵심 키워드 5개(검색/태깅용).")
+    verdict: str = Field(
+        "", description="검증 결과 한 문장. '호재'/'악재'/'중립' 판단을 명시하고 "
+                        "확정/추측 여부와 근거 요지를 덧붙여 결론.")

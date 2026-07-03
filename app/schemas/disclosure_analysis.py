@@ -81,3 +81,15 @@ class DisclosureSignal(BaseModel):
     evidence_quotes: list[str] = Field(
         default_factory=list,
         description="판단 근거가 된 공시 원문의 짧은 인용 (환각 방지용).")
+
+    # ── 전문 요약·키워드·판정 ──
+    summary: str = Field(
+        "",
+        description="공시 전문을 3~4줄로 요약. 핵심 사건·수치·맥락을 사람이 읽기 쉽게.")
+    keywords: list[str] = Field(
+        default_factory=list,
+        description="핵심 키워드 5개(종목·이벤트·수치 등 검색/태깅용 단어).")
+    verdict: str = Field(
+        "",
+        description="검증 결과 한 문장. '호재'/'악재'/'중립' 판단을 명시하고 근거 요지를 "
+                    "덧붙여 결론 짓는다. 예: '호재 — 대형 현금 인수로 단기 상승 기대(신뢰 높음).'")

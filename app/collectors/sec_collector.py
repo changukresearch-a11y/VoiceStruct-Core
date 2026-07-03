@@ -82,7 +82,10 @@ def _recent_filings_meta(cik10: str, forms: tuple[str, ...]) -> dict[str, dict]:
     r = httpx.get(SEC_SUBMISSIONS_URL.format(cik10=cik10), headers=_headers(), timeout=30)
     r.raise_for_status()
     recent = r.json()["filings"]["recent"]
-    items_col = recent.get("items", [""] * len(recent["form"]))
+    n = len(recent["form"])
+    items_col = recent.get("items", [""] * n)
+    # acceptanceDateTime: 초까지 포함한 실제 수리(업로드) 시각. filingDate는 날짜뿐.
+    accepted_col = recent.get("acceptanceDateTime", [""] * n)
     wanted = set(forms)
     out: dict[str, dict] = {}
     for i, form in enumerate(recent["form"]):            # recent는 최신순
@@ -91,6 +94,7 @@ def _recent_filings_meta(cik10: str, forms: tuple[str, ...]) -> dict[str, dict]:
                 "accession": recent["accessionNumber"][i],
                 "primary_doc": recent["primaryDocument"][i],
                 "filed_at": recent["filingDate"][i],
+                "accepted_at": accepted_col[i],
                 "items": items_col[i],
                 "form": form,
             }
@@ -189,6 +193,7 @@ def fetch_latest_8k(ticker: str, use_sample: bool = True) -> NormalizedItem:
             "cik": cik,
             "accession_no": meta["accession"],
             "filed_at": meta["filed_at"],
+            "accepted_at": meta.get("accepted_at"),   # 초 포함 업로드 시각
             "items_raw": meta["items"],
         },
     )
@@ -214,4 +219,5 @@ def fetch_report_text(ticker: str, form_type: str,
     r.raise_for_status()
     text = _html_to_text(r.text)[:max_chars]
     return text, {"accession_no": m["accession"],
-                  "filed_at": m["filed_at"], "url": doc_url}
+                  "filed_at": m["filed_at"],
+                  "accepted_at": m.get("accepted_at"), "url": doc_url}
