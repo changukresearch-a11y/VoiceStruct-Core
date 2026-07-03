@@ -1,10 +1,10 @@
 from app.domains.carebase import extractor
-from app.providers import mock_stt_provider
+from app.providers.mock_stt_provider import MockSttProvider
 
 
 def test_extract_full_from_mock():
-    r = mock_stt_provider.run("audio_x")
-    d = extractor.extract(r["cleaned_transcript"], r["segments"])
+    r = MockSttProvider().transcribe("dummy.wav")
+    d = extractor.extract(r.cleaned_transcript, r.segments)
     assert d["people"] == ["아버지"]
     assert d["places"] == ["병원"]
     assert d["time_reference"] == "오늘 또는 어제"

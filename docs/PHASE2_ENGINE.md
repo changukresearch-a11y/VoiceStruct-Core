@@ -225,9 +225,10 @@ class FieldEvidence(BaseModel):
 
 ## 4. Phase 2 착수 체크리스트
 
-- [ ] `providers/base.py` — `SttProvider` Protocol + `TranscriptResult` 확정
-- [ ] `mock_stt_provider.py`를 Protocol에 맞게 리팩터 (계약 테스트 추가)
-- [ ] `providers/registry.py` + `config.py`에 `STT_PROVIDER` 설정
+- [x] `providers/base.py` — `SttProvider` Protocol + `TranscriptResult` 확정
+      (segments는 파이프라인 일관성 위해 list[dict]로 확정 — Segment dataclass 대신)
+- [x] `mock_stt_provider.py`를 Protocol에 맞게 리팩터 (`MockSttProvider` 클래스 + 계약 테스트 3종)
+- [x] `providers/registry.py` + `config.py`에 `STT_PROVIDER` 설정, `stt_service` Provider 경유로 전환
 - [ ] 실제 Provider 1종 먼저 (CLOVA 권장 — 한국어) 구현 + 통합 테스트
 - [ ] 비동기 파이프라인 (BackgroundTasks → 큐) + `*_PROCESSING` 상태 추가
 - [ ] `llm_extractor.py` — Claude API `messages.parse()` + 시스템 프롬프트(안전 원칙)
