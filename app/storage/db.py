@@ -50,7 +50,58 @@ CREATE TABLE IF NOT EXISTS news_signals (
   verdict TEXT, summary TEXT, keywords TEXT,
   return_1d REAL, return_3d REAL, return_5d REAL, outcome TEXT
 );
+
+-- ── Strategist 전달 계약: 번들 스냅샷 (팀 명세 tb_disclosure/tb_news) ──
+-- 위 *_signals(per-signal 분석로그, 스케줄러·백테스트용)와 별개.
+-- 여기엔 DisclosureBundle/NewsBundle(전략가가 읽는 출력)을 시계열로 append.
+-- PK=(ticker, collected_at): 새 공시/기사 뜰 때마다 새 행, Strategist는 최신 행.
+CREATE TABLE IF NOT EXISTS tb_disclosure (
+  ticker TEXT NOT NULL,
+  collected_at TEXT NOT NULL,
+  trade_date TEXT,
+  has_signal INTEGER,
+  filing_title TEXT, filing_no TEXT, filed_at TEXT,
+  event_type TEXT, sentiment TEXT, sentiment_score REAL, reason TEXT,
+  importance REAL, risk_score REAL, confidence REAL,
+  hard_block INTEGER, hard_block_reason TEXT,
+  summary TEXT, keywords TEXT,
+  PRIMARY KEY (ticker, collected_at)
+);
+
+CREATE TABLE IF NOT EXISTS tb_news (
+  ticker TEXT NOT NULL,
+  collected_at TEXT NOT NULL,
+  trade_date TEXT,
+  has_signal INTEGER,
+  news_title TEXT, source TEXT, published_at TEXT,
+  news_count INTEGER, news_confirmed INTEGER, news_rumor INTEGER,
+  event_type TEXT, sentiment TEXT, sentiment_score REAL, reason TEXT,
+  importance REAL, peak_importance REAL, risk_score REAL, confidence REAL,
+  source_trust REAL, grade_score REAL, confirmed_score REAL, fact_check TEXT,
+  hard_block INTEGER, hard_block_reason TEXT,
+  top_evidence TEXT, summary TEXT, keywords TEXT, ref TEXT,
+  PRIMARY KEY (ticker, collected_at)
+);
 """
+
+# 번들 스냅샷 테이블 컬럼(모델 필드 순서와 동일). keywords/top_evidence는 TEXT로 접어 저장.
+_TB_DISC_COLS = [
+    "ticker", "collected_at", "trade_date", "has_signal",
+    "filing_title", "filing_no", "filed_at",
+    "event_type", "sentiment", "sentiment_score", "reason",
+    "importance", "risk_score", "confidence",
+    "hard_block", "hard_block_reason", "summary", "keywords",
+]
+
+_TB_NEWS_COLS = [
+    "ticker", "collected_at", "trade_date", "has_signal",
+    "news_title", "source", "published_at",
+    "news_count", "news_confirmed", "news_rumor",
+    "event_type", "sentiment", "sentiment_score", "reason",
+    "importance", "peak_importance", "risk_score", "confidence",
+    "source_trust", "grade_score", "confirmed_score", "fact_check",
+    "hard_block", "hard_block_reason", "top_evidence", "summary", "keywords", "ref",
+]
 
 _NEWS_COLS = [
     "analyzed_at", "ticker", "news_key", "source", "source_grade",
@@ -244,6 +295,63 @@ def recent_news(limit: int = 10) -> list[sqlite3.Row]:
             "event_type, sentiment, final_permission, title FROM news_signals "
             "ORDER BY id DESC LIMIT ?", (limit,))
         return cur.fetchall()
+
+
+# ── Strategist 전달 계약: 번들 스냅샷 저장/읽기 (tb_disclosure/tb_news) ──
+# per-signal 로그(save_disclosure/save_news)와 별개. 여기엔 완성된 번들을
+# 시계열로 append하고, Strategist는 종목별 최신 행을 읽는다.
+
+def _bundle_row(bundle: Any, cols: list[str]) -> dict[str, Any]:
+    """번들(Pydantic)을 테이블 컬럼 dict로. 리스트 필드는 TEXT로 접는다."""
+    d = bundle.model_dump()
+    row: dict[str, Any] = {}
+    for c in cols:
+        v = d.get(c)
+        if c == "keywords":
+            v = ", ".join(v) if v else None
+        elif c == "top_evidence":
+            v = " | ".join(v) if v else None
+        row[c] = v
+    return row
+
+
+def _save_bundle(table: str, cols: list[str], bundle: Any) -> None:
+    """번들 스냅샷 1행 append. PK=(ticker, collected_at) 충돌 시 최신값으로 대체."""
+    row = _bundle_row(bundle, cols)
+    placeholders = ", ".join("?" for _ in cols)
+    with _conn() as conn:
+        conn.execute(
+            f"INSERT OR REPLACE INTO {table} ({', '.join(cols)}) "
+            f"VALUES ({placeholders})",
+            [row[c] for c in cols])
+
+
+def save_disclosure_bundle(bundle: Any) -> None:
+    """DisclosureBundle 스냅샷을 tb_disclosure에 append."""
+    _save_bundle("tb_disclosure", _TB_DISC_COLS, bundle)
+
+
+def save_news_bundle(bundle: Any) -> None:
+    """NewsBundle 스냅샷을 tb_news에 append."""
+    _save_bundle("tb_news", _TB_NEWS_COLS, bundle)
+
+
+def latest_disclosure(ticker: str) -> sqlite3.Row | None:
+    """종목의 최신 공시 번들 스냅샷 (Strategist 읽기용)."""
+    with _conn() as conn:
+        conn.row_factory = sqlite3.Row
+        return conn.execute(
+            "SELECT * FROM tb_disclosure WHERE ticker=? "
+            "ORDER BY collected_at DESC LIMIT 1", (ticker.upper(),)).fetchone()
+
+
+def latest_news(ticker: str) -> sqlite3.Row | None:
+    """종목의 최신 뉴스 번들 스냅샷 (Strategist 읽기용)."""
+    with _conn() as conn:
+        conn.row_factory = sqlite3.Row
+        return conn.execute(
+            "SELECT * FROM tb_news WHERE ticker=? "
+            "ORDER BY collected_at DESC LIMIT 1", (ticker.upper(),)).fetchone()
 
 
 # ── 백테스트: 전방수익률 채우기 대상/기록 ────────────────────────────

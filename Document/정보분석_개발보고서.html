@@ -94,7 +94,7 @@
     <a href="#s2"><span class="num">02</span> 아키텍처·모듈맵</a>
     <a href="#s3"><span class="num">03</span> 공시 파이프라인</a>
     <a href="#s4"><span class="num">04</span> 뉴스 파이프라인</a>
-    <a href="#s5"><span class="num">05</span> 산출물 계약(24/31)</a>
+    <a href="#s5"><span class="num">05</span> 산출물 계약(18/28)</a>
     <a href="#s6"><span class="num">06</span> 0~1 지표 산출근거 ★</a>
     <a href="#s7"><span class="num">07</span> 출처등급·키워드필터</a>
     <a href="#s8"><span class="num">08</span> 매매권한·하드리스크</a>
@@ -143,7 +143,7 @@
   <div class="call b"><b>경계</b> — 정보분석은 <b>"믿을 수 있는 사실을, 검증된 구조로, 보수적으로 요약"</b>까지. <b>실제 매수 확정·시장반응 검증·비중 계산은 하지 않는다</b>(Strategist 이후 몫). 대신 <b>안전장치(hard_block)는 이 단계에서 확정</b>해 뒤가 못 뒤집게 못 박는다.</p></div>
   <div class="grid c3" style="margin-top:14px">
     <div class="card"><h3>2</h3><p class="dim">담당 소스 축 — 공시·뉴스</p></div>
-    <div class="card"><h3>24 / 31</h3><p class="dim">Bundle 필드 수 (공시/뉴스)</p></div>
+    <div class="card"><h3>18 / 28</h3><p class="dim">Bundle 필드 수 (공시/뉴스)</p></div>
     <div class="card"><h3>11 / 6</h3><p class="dim">이벤트 온톨로지 / 매매권한 단계</p></div>
   </div>
 </section>
@@ -213,34 +213,34 @@
 <!-- 5 -->
 <section id="s5">
   <div class="sec-label">Contract</div>
-  <h2>산출물 계약 — DisclosureBundle(24) · NewsBundle(31)</h2>
-  <p class="sec-desc">정식 전달 = <b>JSON</b>(<code>model_dump_json()</code>). 모든 값이 숫자(0~1 float · 0/1 int · 카운트) 또는 짧은 문자열이라 파싱·검증 안정적. <code>to_prompt()</code>는 보조 텍스트. 공시·뉴스는 <b>완전 별개 2객체</b>(합치기는 Strategist).</p>
+  <h2>산출물 계약 — DisclosureBundle(18) · NewsBundle(28)</h2>
+  <p class="sec-desc">정식 계약 = <b>DB 스냅샷 행</b>(<code>tb_disclosure</code> 18컬럼 · <code>tb_news</code> 28컬럼, §11). 모든 값이 숫자(0~1 float · 0/1 int · 카운트) 또는 짧은 문자열이라 파싱·검증 안정적. <code>model_dump_json()</code>·<code>to_prompt()</code>는 보조 텍스트. 공시·뉴스는 <b>완전 별개 2객체</b>(합치기는 Strategist).</p>
   <h3>공통 식별 (두 Bundle)</h3>
   <div class="tbl"><table>
     <tr><th>필드</th><th>출처</th><th>내용</th></tr>
     <tr><td><code>ticker</code></td><td><span class="tag v">스크리닝</span></td><td>대문자 티커</td></tr>
-    <tr><td><code>company_name</code></td><td><span class="tag sec">SEC</span></td><td>company_tickers.json 자동</td></tr>
-    <tr><td><code>category</code></td><td><span class="tag v">스크리닝</span></td><td>섹터/테마 — 그대로 통과(미가공)</td></tr>
-    <tr><td><code>as_of</code> · <code>created_at</code></td><td><span class="tag code">시스템</span></td><td>분석 기준일 / 레코드 생성 시각(초 포함, DB 생성일)</td></tr>
+    <tr><td><code>trade_date</code> · <code>collected_at</code></td><td><span class="tag code">시스템</span></td><td>매매 기준일 / 수집·레코드 시각(초 포함) — <code>tb_*</code> PK의 시간축</td></tr>
     <tr><td><code>has_signal</code></td><td><span class="tag code">코드</span></td><td>0/1 — LLM 신호 유무</td></tr>
-    <tr><td><code>hard_block</code>·<code>hard_block_reason</code></td><td><span class="tag code">코드</span></td><td>0/1 매수 override(§8) · 사유</td></tr>
-    <tr><td><code>reason</code>·<code>verdict</code>·<code>summary</code>·<code>keywords</code></td><td><span class="tag llm">LLM</span></td><td>한 줄 근거 · 호재/악재 판정 문장 · 전문 3~4줄 · 키워드 5개 (모두 <b>영어</b>)</td></tr>
     <tr><td><code>event_type</code></td><td><span class="tag llm">LLM</span>+<span class="tag code">코드</span></td><td>통일 11종(§9)</td></tr>
-    <tr><td><code>fact_check</code></td><td><span class="tag code">코드</span></td><td>팩트체크 한 문장(§6)</td></tr>
+    <tr><td><code>hard_block</code>·<code>hard_block_reason</code></td><td><span class="tag code">코드</span></td><td>0/1 매수 override(§8) · 사유</td></tr>
+    <tr><td><code>reason</code>·<code>summary</code>·<code>keywords</code></td><td><span class="tag llm">LLM</span></td><td>한 줄 근거(<code>sentiment_score</code> 바로 아래 배치) · 전문 3~4줄 · 키워드 5개 (모두 <b>영어</b>)</td></tr>
   </table></div>
-  <h3>공시 전용</h3>
+  <div class="call b"><b>삭제·개명</b> — <code>company_name</code>·<code>category</code>는 <code>tb_universe</code>에 이미 있어 <b>JOIN</b>으로 읽으므로 번들에서 제거. <code>verdict</code>는 <code>sentiment_score</code>+<code>reason</code>의 재진술이라 두 Bundle에서 삭제. 개명: <code>as_of→trade_date</code> · <code>created_at→collected_at</code>.</div>
+  <h3>공시 전용 (18필드)</h3>
   <div class="tbl"><table>
     <tr><th>필드</th><th>출처</th><th>내용</th></tr>
     <tr><td><code>filing_title</code>·<code>filing_no</code>·<code>filed_at</code></td><td><span class="tag sec">SEC</span></td><td>제목 · 공시번호(accession) · <b>업로드 일시(초 포함, acceptanceDateTime)</b></td></tr>
-    <tr><td>점수(0~1)</td><td><span class="tag code">코드</span></td><td><code>sentiment_score · importance · risk_score · confidence · confirmed_score(=1.0)</code> · <code>sentiment</code>(라벨) · <code>ref</code></td></tr>
+    <tr><td>점수(0~1)</td><td><span class="tag code">코드</span></td><td><code>sentiment_score · importance · risk_score · confidence</code> · <code>sentiment</code>(라벨)</td></tr>
   </table></div>
-  <h3>뉴스 전용 (대표 기사 + 집계)</h3>
+  <div class="call w"><b>공시 삭제 3필드</b> — <code>confirmed_score</code>(공시는 늘 1.0 → 정보량 0) · <code>fact_check</code>(늘 "Verified" 상수) · <code>ref</code>(<code>filing_no</code> accession이 원문 역추적 ID라 중복). 셋 다 <b>뉴스에서는 값이 가변이라 유지</b>.</div>
+  <h3>뉴스 전용 (28필드 · 대표 기사 + 집계)</h3>
   <div class="tbl"><table>
     <tr><th>필드</th><th>출처</th><th>내용</th></tr>
     <tr><td><code>news_title</code>·<code>source</code>·<code>published_at</code></td><td><span class="tag rss">RSS</span></td><td><b>대표 기사</b> 제목 · 언론사 · 발행일시(초 포함)</td></tr>
     <tr><td><code>news_count</code>·<code>news_confirmed</code>·<code>news_rumor</code></td><td><span class="tag code">코드</span></td><td>분석 건수 · 확정 · 루머</td></tr>
-    <tr><td>점수(0~1)</td><td><span class="tag code">코드</span></td><td><code>sentiment_score·importance·peak_importance·risk_score·confidence·source_trust·grade_score·confirmed_score</code></td></tr>
-    <tr><td><code>top_evidence</code></td><td><span class="tag code">코드</span></td><td>대표 근거 헤드라인</td></tr>
+    <tr><td>점수(0~1)</td><td><span class="tag code">코드</span></td><td><code>sentiment_score·importance·peak_importance·risk_score·confidence·source_trust·grade_score·confirmed_score</code> · <code>sentiment</code>(라벨)</td></tr>
+    <tr><td><code>fact_check</code></td><td><span class="tag code">코드</span></td><td>팩트체크 한 문장(§6) — <b>뉴스만 유지</b>(Verified/Unverified 가변)</td></tr>
+    <tr><td><code>top_evidence</code>·<code>ref</code></td><td><span class="tag code">코드</span></td><td>대표 근거 헤드라인 · 원문 역추적 링크(뉴스는 <code>filing_no</code>가 없어 유지)</td></tr>
   </table></div>
 </section>
 
@@ -286,12 +286,13 @@ weight = certainty(.9/.6/.3) × (1.0 <span class="kw">if</span> is_confirmed <sp
     <tr><td><code>confirmed_score</code></td><td>확정 비율 = <code>news_confirmed / news_count</code></td></tr>
     <tr><td><b>대표 기사</b></td><td><code>importance × weight</code>(신뢰가중) 최대 → 시끄러운 루머가 헤드라인 안 되게</td></tr>
   </table></div>
-  <div class="call g"><b>공시 점수</b> — 단일 신호라 집계 없음. <code>importance=_n10(LLM)</code> · <code>confidence=certainty매핑</code> · <code>confirmed_score=1.0</code>(법적 제출=사실) · <code>sentiment_score=_senti_score(부호×importance, confidence)</code>.</div>
+  <div class="call g"><b>공시 점수</b> — 단일 신호라 집계 없음. <code>importance=_n10(LLM)</code> · <code>confidence=certainty매핑</code> · <code>sentiment_score=_senti_score(부호×importance, confidence)</code>. <b>공시 <code>confirmed_score</code>(늘 1.0)·<code>fact_check</code>(늘 Verified)는 정보량 0이라 번들에서 삭제됨</b>(내부 계산 로직 자체는 그대로).</div>
 
   <h3>6-4. fact_check — 팩트체크 판정(코드, LLM 무관)</h3>
+  <p>계산 로직은 그대로지만 <b>번들 노출은 뉴스 전용</b>. 공시는 늘 "Verified" 상수라 정보량이 없어 번들에서 삭제(§5) — 아래 공시 행은 내부 계산 기준일 뿐.</p>
   <div class="tbl"><table>
     <tr><th>판정</th><th>조건(경계)</th></tr>
-    <tr><td><span class="tag g">공시</span> Verified</td><td>항상 — <code>"Verified — official SEC filing (legally binding fact)."</code></td></tr>
+    <tr><td><span class="tag g">공시</span> Verified <span class="dim">(번들 미노출)</span></td><td>항상 — <code>"Verified — official SEC filing (legally binding fact)."</code></td></tr>
     <tr><td><span class="tag g">Verified</span></td><td>뉴스: <code>ratio ≥ 0.5</code> 그리고 <code>source_trust ≥ 0.6</code> (ratio=확정/전체)</td></tr>
     <tr><td><span class="tag r">Unverified (rumor)</span></td><td><code>confirmed == 0</code> 또는 <code>source_trust &lt; 0.4</code></td></tr>
     <tr><td><span class="tag" style="background:var(--gold-soft);color:var(--gold)">Partially verified</span></td><td>그 외</td></tr>
@@ -389,7 +390,7 @@ weight = certainty(.9/.6/.3) × (1.0 <span class="kw">if</span> is_confirmed <sp
     <div class="card"><h3><span class="tag llm">LLM</span> 은 해석만</h3><ul>
       <li>8-K 본문/뉴스 헤드라인의 event_type·sentiment·importance(0~10)·risk_score</li>
       <li><code>is_confirmed</code>(확정/추측) · <code>source_trust</code>(0~1)</li>
-      <li>reason · verdict · summary · keywords (영어)</li>
+      <li>reason · summary · keywords (영어)</li>
       <li>추론강제: <code>reasoning</code>(CoT) → <code>certainty_level</code> 순서로 사고</li>
     </ul></div>
   </div>
@@ -399,14 +400,17 @@ weight = certainty(.9/.6/.3) × (1.0 <span class="kw">if</span> is_confirmed <sp
 <section id="s11">
   <div class="sec-label">Storage</div>
   <h2>저장 · 증분 · 백테스트</h2>
-  <p class="sec-desc">SQLite <code>data/quantinue.sqlite</code>. 백테스트·감사·증분의 토대.</p>
+  <p class="sec-desc">SQLite <code>data/quantinue.sqlite</code>. 두 축 — ① <b>전략가 전달용 스냅샷</b>(<code>tb_disclosure</code>/<code>tb_news</code>) ② 백테스트·감사·증분용 <b>신호 로그</b>(기존 그대로). 두 축은 별개 테이블로 병존.</p>
   <div class="tbl"><table>
     <tr><th>테이블</th><th>용도</th><th>핵심 컬럼</th></tr>
-    <tr><td><code>disclosure_signals</code></td><td>공시 신호 저장</td><td>event_type·sentiment·importance·risk·certainty·<b>filed_at·accepted_at·title·verdict·summary·keywords</b>·return_1/3/5d·outcome</td></tr>
-    <tr><td><code>news_signals</code></td><td>뉴스 신호(드롭 포함)</td><td>news_key(=google_link, UNIQUE)·source·source_grade·is_confirmed·source_trust·verdict·summary·keywords·return_*</td></tr>
+    <tr><td><code>tb_disclosure</code> <span class="tag g">신규</span></td><td><b>전략가 전달용 공시 스냅샷(18컬럼)</b></td><td><b>PK=(ticker, collected_at)</b> · 새 공시마다 행 append(시계열 누적, 덮어쓰기 X). Strategist는 종목별 최신 행 JOIN</td></tr>
+    <tr><td><code>tb_news</code> <span class="tag g">신규</span></td><td><b>전략가 전달용 뉴스 스냅샷(28컬럼)</b></td><td><b>PK=(ticker, collected_at)</b> · 새 기사마다 행 append. Strategist는 종목별 최신 행 JOIN</td></tr>
+    <tr><td><code>disclosure_signals</code></td><td>공시 신호 로그(스케줄러·백테스트용, <b>유지</b>)</td><td>event_type·sentiment·importance·risk·certainty·<b>filed_at·accepted_at·title·summary·keywords</b>·return_1/3/5d·outcome</td></tr>
+    <tr><td><code>news_signals</code></td><td>뉴스 신호 로그(드롭 포함, <b>유지</b>)</td><td>news_key(=google_link, UNIQUE)·source·source_grade·is_confirmed·source_trust·summary·keywords·return_*</td></tr>
     <tr><td><code>processed_filings</code></td><td>메타증분</td><td>accession(PK, form 무관)</td></tr>
     <tr><td><code>companies</code></td><td>유니버스</td><td>ticker·cik·market_cap·sector·priority·active·last_accession</td></tr>
   </table></div>
+  <div class="call g"><b>전달 구조 변경</b> — 구: 종목당 <code>DisclosureBundle</code>/<code>NewsBundle</code> 2객체를 <code>model_dump_json()</code>로 <b>직접 전달</b>. 신: 두 객체를 스냅샷 테이블에 저장(<code>save_disclosure_bundle</code>/<code>save_news_bundle</code>)하고, Strategist가 종목별 <b>최신 행</b>을 읽음(<code>latest_disclosure</code>/<code>latest_news</code>). 수집 주기 공시=1시간·뉴스=5분(새 것만 append, dedup 공시=accession·뉴스=google_link). <code>tb_*</code>는 <b>전략가 출력 전용 별개 테이블</b>로, 기존 <code>disclosure_signals</code>/<code>news_signals</code>(per-signal 분석로그)와 무관하게 병존한다.</div>
   <ul>
     <li><b>증분</b>: <code>processed_filings.accession</code>으로 처리 여부 판정 → 새 건만 문서 다운로드·LLM. 뉴스 dedup 키 = <code>google_link</code>(기사별 유니크, url 도메인 아님).</li>
     <li><b>백테스트</b>: Yahoo chart로 +1/3/5 거래일 수익률 채움. day0 = <code>COALESCE(filed_at, analyzed_at)</code>(공시) / <code>published_at</code>(뉴스). outcome=센티먼트 방향 적중. <b>가중치 자동조정은 안 함</b>(과적합 방지, 측정·리포트까지만).</li>

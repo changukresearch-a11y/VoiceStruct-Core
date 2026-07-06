@@ -11,11 +11,13 @@ SEC 공시(8-K·10-Q/K·Form4)와 실시간 뉴스(RSS)를 **구조화 신호로
 
 ## 📚 문서 (팀 공유)
 
+> 📁 아래 문서 파일은 전부 **`Document/`** 폴더에 있다. (`README.md`·`WORKLOG.md`는 루트 유지)
+
 | 문서 | 대상 | 내용 |
 |---|---|---|
 | **`정보분석_개발보고서.html`** | 개발자 | 파트 전체 조망 — 파이프라인·아키텍처·**0~1 지표 산출근거(공식·상수·임계값)**·코드vsLLM·저장·갭 |
-| **`결과값_필드_레퍼런스.html`** | 개발자 | 필드 데이터 사전 — 공시24·뉴스31 필드별 출처·산출식·등급 경계 |
-| **`데이터스키마_인터페이스명세_v2`** (md·html) | 이은미(Strategist) | 전달 계약 — Bundle 스키마·JSON·to_prompt |
+| **`결과값_필드_레퍼런스.html`** | 개발자 | 필드 데이터 사전 — 공시18·뉴스28 필드별 출처·산출식·등급 경계 |
+| **`데이터스키마_인터페이스명세_v2`** (md·html) | 이은미(Strategist) | 전달 계약 — Bundle 스키마·DB 스냅샷(tb_disclosure/tb_news)·to_prompt |
 | **`공시_상세설계서.html` · `뉴스_상세설계서.html`** | 개발자 | 파이프라인별 상세 설계 |
 | **`전략가_전달_예시_10건.json`** | 이은미 | 실제 로직으로 산출한 결과값 예시 10건(전 필드) |
 | **`스크리닝_입력스키마_스크리닝→정보분석`** (md·html) | 스크리닝 담당 | 입력 계약(50종목 JSON) |
@@ -24,12 +26,13 @@ SEC 공시(8-K·10-Q/K·Form4)와 실시간 뉴스(RSS)를 **구조화 신호로
 
 ## 산출물 계약 & 0~1 지표
 
-공시·뉴스는 **완전 별개 2객체**로 넘어간다(합치기는 Strategist). 정식 전달 = **JSON**(`model_dump_json()`), 보조 = `to_prompt()`.
-모든 점수는 **0~1 소수 2자리**, 자유서술(summary·verdict·reason)·라벨은 **영어**(전략가 에이전트가 읽음).
+공시·뉴스는 **완전 별개 2객체**로 넘어간다(합치기는 Strategist). 정식 전달 = **DB 스냅샷 테이블** `tb_disclosure`(18)·`tb_news`(28), **PK=(ticker, collected_at)** 시계열 append → Strategist는 종목별 **최신 행**을 JOIN해 읽음. 보조 = `to_prompt()`·JSON.
+모든 점수는 **0~1 소수 2자리**, 자유서술(summary·reason)·라벨은 **영어**(전략가 에이전트가 읽음). (회사명·카테고리는 tb_universe JOIN)
 
-- **핵심 0~1 지표**: `sentiment_score`(0=악재·0.5=중립·1=호재, 호재만 신뢰 감쇠) · `importance`(방향 무관 강도) · `risk_score` · `confidence` · `source_trust`(뉴스) · `grade_score`(뉴스) · `confirmed_score`
+- **핵심 0~1 지표**: `sentiment_score`(0=악재·0.5=중립·1=호재, 호재만 신뢰 감쇠) · `importance`(방향 무관 강도) · `risk_score` · `confidence` · `source_trust`(뉴스) · `grade_score`(뉴스) · `confirmed_score`(뉴스)
 - **원문 식별**: 공시 `filing_title·filing_no·filed_at`(초 단위) / 뉴스 `news_title·source·published_at`(초 단위)
-- **부가**: `fact_check`(코드 판정) · `verdict`(호재/악재 문장) · `summary`(3~4줄) · `keywords`(5개) · `hard_block` · `created_at`
+- **부가**: `fact_check`(뉴스, 코드 판정) · `reason`(근거 한 줄) · `summary`(3~4줄) · `keywords`(5개) · `hard_block` · `collected_at`
+  - ※ 2026-07-06 팀 명세 반영: 공시 24→18·뉴스 31→28필드(삭제 `company_name·category·verdict`+공시 `confirmed_score·fact_check·ref`), `as_of→trade_date`·`created_at→collected_at`.
 - 산출 근거·임계값은 `결과값_필드_레퍼런스.html` §6, `정보분석_개발보고서.html` §6 참고.
 
 ---

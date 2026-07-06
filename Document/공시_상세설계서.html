@@ -237,9 +237,8 @@ SEC investigation    → BLOCK_BUY    # SEC 조사</code></pre>
     reason: str               # 한 줄 근거(수치 포함 권장)
     evidence_quotes: list     # 원문 인용(환각 방지)
     summary: str              # ★ 공시 전문 3~4줄 요약
-    keywords: list            # ★ 핵심 키워드 5개
-    verdict: str              # ★ 검증 결과 한 문장(맨 앞 호재/악재/중립 명시)</code></pre>
-    <div class="callout c-info">💡 <b>요약·키워드·판정 (신규)</b> — 구조화 점수와 별개로, 사람이 바로 읽는 <b>전문 3~4줄 요약</b>·<b>핵심 키워드 5개</b>·<b>호재/악재 판정 한 문장</b>을 함께 낸다. LLM이 원문 근거로만 채우며(환각 방지), 하류(Strategist·리뷰·대시보드)가 근거를 빠르게 파악하게 한다.</div>
+    keywords: list            # ★ 핵심 키워드 5개</code></pre>
+    <div class="callout c-info">💡 <b>요약·키워드 (신규)</b> — 구조화 점수와 별개로, 사람이 바로 읽는 <b>전문 3~4줄 요약</b>·<b>핵심 키워드 5개</b>를 함께 낸다. LLM이 원문 근거로만 채우며(환각 방지), 하류(Strategist·리뷰·대시보드)가 근거를 빠르게 파악하게 한다. (호재/악재 판정 <code>verdict</code>은 <code>sentiment_score</code>+<code>reason</code>의 재진술이라 계약에서 제거됨.)</div>
     <div class="callout c-info">💡 <b>event_type 온톨로지 11종</b> (공시·뉴스 공유, <code>ontology.py</code> 단일 정의): earnings · guidance_change · ma · capital_raise · management_change · insider_trade · product_deal · analyst_rating · regulation_legal · delisting_halt · other. 과세분화 금지(표본 부족).</div>
   </section>
 
@@ -263,35 +262,32 @@ SEC investigation    → BLOCK_BUY    # SEC 조사</code></pre>
   <section id="s10">
     <h2><span class="n">10</span> 산출물 — DisclosureBundle (Strategist 입력)</h2>
     <p class="lead">공시 최종 산출물. <b>뉴스와 완전 별개 객체</b>로 넘어가고(합치기는 Strategist가), 모든 점수는 <b>0~1 소수점</b>으로 통일한다. 방향은 <code>sentiment_score</code>(0=악재·0.5=중립·1=호재)로 점수화 + <code>sentiment</code> 라벨 병기.</p>
-    <pre><code>class DisclosureBundle:
-    ticker; company_name; category    # 종목 식별(company_name=SEC 자동, category=스크리닝 전달)
-    as_of; created_at; has_signal      # ★ created_at=레코드 생성시각(초, DB생성일)
+    <pre><code>class DisclosureBundle:              # 18필드 (company_name·category는 tb_universe JOIN)
+    ticker; trade_date; collected_at  # ★ trade_date=거래일 · collected_at=수집시각(초, DB append)
+    has_signal
     filing_title; filing_no; filed_at  # ★ 공시 제목·번호(accession)·업로드일시(초 포함)
     event_type                        # 통일 11종
     sentiment; sentiment_score: 0~1   # 방향 라벨 + 점수(0=악재·0.5=중립·1=호재)
+    reason                            # ★ 한 줄 근거(수치 포함) — sentiment_score 바로 아래
     importance: 0~1                   # 강도(방향 뺀 별도 축)
     risk_score: 0~1
     confidence: 0~1                   # certainty_level 수치화
-    confirmed_score: 0~1              # 공시=1.0 (법적 의무 제출=확정)
-    fact_check                        # ★ 팩트체크 한 문장(코드 판정)
     hard_block: 0/1 + hard_block_reason   # 상폐·going concern → 매수 override
-    verdict; summary; keywords         # ★ 호재/악재 판정·전문요약·키워드5
-    reason; ref                       # 한 줄 근거 · accession/링크
-    def to_prompt() -> str            # LLM이 읽는 압축 텍스트</code></pre>
+    summary; keywords                 # ★ 전문요약·키워드5
+    def to_prompt() -> str            # LLM이 읽는 압축 텍스트(보조)</code></pre>
     <div class="callout c-info">💡 <b>원문 식별 (신규)</b> — 판단 근거를 추적·인용하도록 <code>filing_title</code>(공시 제목)·<code>filing_no</code>(공시 번호=accession)·<code>filed_at</code>(업로드 일시, <b>초까지</b> — SEC <code>acceptanceDateTime</code> 우선, 없으면 제출일)을 함께 전달한다.</div>
     <div class="callout c-tip">🍳 <b>sentiment_score 산출 &amp; 근거</b> — <code>0.5 + 0.5 × (부호 × importance)</code>로 0~1에 매핑하되, <b>호재(+)는 confidence로 중립쪽 감쇠</b>·<b>악재(−)는 유지</b>하는 비대칭 규칙(뉴스와 동일). 공시는 대개 certainty=High(0.9)라 거의 안 눌리지만, <b>모호(Low)한 호재 공시</b>는 방향을 덜 단정한다. <code>importance</code>(순수 강도)와 방향/강도 축을 분리 유지.</div>
-    <div class="callout c-info">💡 <b>hard_block은 sentiment에 안 녹이고 별도 플래그.</b> 상폐·going concern 같은 안전장치는 이 단계에서 <b>0/1로 못 박아</b> 뒤 단계가 뒤집지 못하게 한다. 정식 전달은 JSON(<code>model_dump_json()</code>), <code>to_prompt()</code>는 보조.</div>
+    <div class="callout c-info">💡 <b>hard_block은 sentiment에 안 녹이고 별도 플래그.</b> 상폐·going concern 같은 안전장치는 이 단계에서 <b>0/1로 못 박아</b> 뒤 단계가 뒤집지 못하게 한다.</div>
+    <div class="callout c-info">🗄️ <b>전달 = 공유 DB 스냅샷</b> — 정식 계약은 2객체 직접 전달이 아니라 <b><code>tb_disclosure</code>(18컬럼) 스냅샷 테이블</b>이다. <b>PK=(ticker, collected_at)</b>, 새 공시가 뜰 때마다 <b>새 행 append</b>(덮어쓰기 X, 시계열 누적)하고 Strategist는 종목별 <b>최신 행</b>을 <code>tb_universe</code>(company_name·category 보유)와 <b>JOIN</b>해 읽는다. 저장 <code>save_disclosure_bundle</code> · 읽기 <code>latest_disclosure</code>. 수집 주기 = <b>1시간</b>(중복제거 키 = accession). <code>to_prompt()</code>는 보조. 기존 <code>disclosure_signals</code>(per-signal 로그)는 그대로 유지되는 <b>별개</b> 테이블.</div>
     <h3>10-1. to_prompt() 실출력 예시</h3>
-    <pre><code>[NVDA · NVIDIA CORP · Semiconductors] Disclosure as_of 2026-07-03
- Disclosure: ma / positive(0.86) imp0.8 risk0.3 conf0.9 confirmed1.0
+    <pre><code>[NVDA] Disclosure · 2026-07-03
+ Disclosure: ma / positive(0.86) imp0.8 risk0.3 conf0.9
        Filing: "NVDA 8-K — Item 1.01 Entry into Material Agreement" · No 0001045810-26-000123 · filed 2026-07-03T16:30:12.000Z
-       Fact-check: Verified — official SEC filing (legally binding fact).
-       Verdict: Bullish — large all-cash acquisition, near-term upside likely (high trust).
+       Reason: "Large acquisition announced (30% premium)"
        Summary: Acquirer to buy Target for 35% cash premium. Deal size $10B. Regulatory approval pending.
        Keywords: acquisition, 35% premium, all-cash, regulatory approval, large M&A
-       Reason: "Large acquisition announced (30% premium)"
  Overall: hard_block=0 · generated 2026-07-03T16:31:05+00:00</code></pre>
-    <div class="callout c-info">💡 <b>출력 언어 = 영어</b> — 자유서술 필드(<code>summary</code>·<code>verdict</code>·<code>reason</code>·<code>evidence_quotes</code>)와 <code>to_prompt()</code> 라벨은 <b>전부 영어</b>다. 전략가(Strategist) 에이전트가 영어로 읽기 때문(사람 검수용 아님). enum·점수 필드는 공통.</div>
+    <div class="callout c-info">💡 <b>출력 언어 = 영어</b> — 자유서술 필드(<code>summary</code>·<code>reason</code>·<code>evidence_quotes</code>)와 <code>to_prompt()</code> 라벨은 <b>전부 영어</b>다. 전략가(Strategist) 에이전트가 영어로 읽기 때문(사람 검수용 아님). enum·점수 필드는 공통.</div>
   </section>
 
   <!-- 11 -->

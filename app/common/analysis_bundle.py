@@ -1,15 +1,19 @@
 """
 정보분석(공시·뉴스) → Strategist 인터페이스 계약.
 
-팀 회의 피드백(2026-07-02) 반영:
+팀 파이프라인 명세(2026-07-06, 김지현) 반영 — 정창욱 협의 수용:
   - 공시·뉴스 결과를 **완전 별개 2객체**로 분리 (DisclosureBundle / NewsBundle).
-    (기존: 종목당 1개 AnalysisBundle로 합치고 net_sentiment로 합산 → 폐기)
-  - 모든 점수를 **0~1 소수점으로 통일** (importance·risk_score·confidence·source_trust).
-    방향(호재/악재)은 점수 부호가 아니라 sentiment 라벨로만 표현.
-    → 강도는 importance(0~1) 하나로. 기존 score(방향×강도)는 importance와 중복이라 폐기.
-  - 종목 **회사명(company_name)·카테고리(category)** 필드 추가.
-    company_name = 공시 collector가 SEC에서 채움, category = 스크리닝 에이전트가 전달.
-  - Strategist가 두 소스를 직접 결합 (우리는 합산하지 않음).
+  - 모든 점수를 **0~1 소수점으로 통일** (importance·risk_score·confidence·source_trust 등).
+    방향(호재/악재)은 sentiment_score(0~1) + sentiment 라벨로 표현.
+  - 전달 = **DB 테이블 스냅샷**(tb_disclosure / tb_news, PK=(ticker, collected_at)).
+    Strategist가 종목별 **최신 행**을 JOIN해 읽는다. (app/storage/db.py)
+
+명세 수용으로 원안 대비 제거된 필드:
+  - 공시(24→18): company_name·category(→tb_universe JOIN)·confirmed_score(늘 1.0)·
+    fact_check(상수 문장)·verdict(sentiment_score+reason 중복)·ref(filing_no 중복).
+  - 뉴스(31→28): company_name·category(JOIN)·verdict(sentiment+reason 재진술).
+  - 두 객체 공통: as_of→**trade_date**, created_at→**collected_at** 개명,
+    reason을 sentiment_score 바로 아래로 재배치.
 """
 from __future__ import annotations
 
@@ -49,13 +53,8 @@ def _senti_score(signed: float, confidence: float = 1.0) -> float:
 
 
 def _now() -> str:
-    """레코드 생성 시각 (UTC ISO, 초 포함) — DB 생성 날짜 성격."""
+    """레코드 생성 시각 (UTC ISO, 초 포함) — 스냅샷 collected_at 성격."""
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
-def _fact_check_disclosure() -> str:
-    """공시 = 법적 의무 제출이라 사실로 확정."""
-    return "Verified — official SEC filing (legally binding fact)."
 
 
 def _fact_check_news(confirmed: int, count: int, trust: float, grade: float) -> str:
@@ -70,52 +69,40 @@ def _fact_check_news(confirmed: int, count: int, trust: float, grade: float) -> 
     return f"{status} — {confirmed}/{count} confirmed, trust {trust}, grade {grade}."
 
 
-def _head(ticker: str, company: str | None, category: str | None,
-          kind: str, as_of: str) -> str:
-    h = f"[{ticker}"
-    if company:
-        h += f" · {company}"
-    if category:
-        h += f" · {category}"
-    return h + f"] {kind} as_of {as_of}"
+def _head(ticker: str, kind: str, trade_date: str) -> str:
+    return f"[{ticker}] {kind} · {trade_date}"
 
 
 # ── 공시 결과 (단독) ─────────────────────────────────────
 
 class DisclosureBundle(BaseModel):
-    """공시 분석 결과 — 종목당 1개, 뉴스와 완전 분리."""
+    """공시 분석 결과 — 종목당 1개 스냅샷, 뉴스와 완전 분리. 18필드(명세 수용)."""
     # 종목 식별
     ticker: str
-    company_name: str | None = None
-    category: str | None = None          # 스크리닝 에이전트가 전달
-    as_of: str
-    created_at: str = ""                  # 레코드 생성 시각(초 포함, DB 생성일 성격)
+    trade_date: str                       # 분석 기준일(FK→tb_daily_pick), 구 as_of
+    collected_at: str = ""                # 스냅샷 생성 시각(초 포함, PK), 구 created_at
     has_signal: int = 0                   # 0/1 (신호 유무)
     # 공시 원문 식별 (전달용)
     filing_title: str = ""                # 공시 제목
-    filing_no: str = ""                   # 공시 번호(accession)
+    filing_no: str = ""                   # 공시 번호(accession) — 원문 역추적 ID
     filed_at: str = ""                    # 업로드 일시(초 포함, acceptanceDateTime 우선)
     # 공시 신호 (점수 전부 0~1)
     event_type: str = "other"
-    sentiment: str = "neutral"           # 방향 라벨(sentiment_score에서 파생)
-    sentiment_score: float = 0.5         # 0~1: 0=강악재·0.5=중립·1=강호재
-    importance: float = 0.0              # 0~1 (강도·중요도, 방향 뺀 별도 축)
-    risk_score: float = 0.0              # 0~1
-    confidence: float = 0.0              # 0~1
-    confirmed_score: float = 0.0         # 0~1 (확정도. 공시=1.0 도장 찍힌 사실)
-    fact_check: str = ""                  # 팩트체크 상태 한 문장(코드 판정)
+    sentiment: str = "neutral"            # 방향 라벨(sentiment_score에서 파생)
+    sentiment_score: float = 0.5          # 0~1: 0=강악재·0.5=중립·1=강호재
+    reason: str = ""                      # sentiment_score 근거 한 줄
+    importance: float = 0.0               # 0~1 (강도·중요도, 방향 뺀 별도 축)
+    risk_score: float = 0.0               # 0~1
+    confidence: float = 0.0               # 0~1 (LLM 분석 확신도)
     # 안전장치
-    hard_block: int = 0                   # 0/1 (안전장치 override)
+    hard_block: int = 0                   # 0/1 (매수 즉시 차단)
     hard_block_reason: str | None = None
-    # 근거 · 전문 요약
-    reason: str = ""                      # 한 줄 근거
-    verdict: str = ""                     # 검증 결과 한 문장(호재/악재 판단)
+    # 전문 요약
     summary: str = ""                     # 공시 전문 3~4줄 요약
     keywords: list[str] = Field(default_factory=list)   # 핵심 키워드 5개
-    ref: str = ""
 
     def to_prompt(self) -> str:
-        head = _head(self.ticker, self.company_name, self.category, "Disclosure", self.as_of)
+        head = _head(self.ticker, "Disclosure", self.trade_date)
         filing = (f'       Filing: "{self.filing_title}" · No {self.filing_no} '
                   f"· filed {self.filed_at}"
                   if (self.filing_no or self.filing_title) else "")
@@ -124,70 +111,62 @@ class DisclosureBundle(BaseModel):
             return out + (f"\n{filing}" if filing else "")
         lines = [head, (
             f" Disclosure: {self.event_type} / {self.sentiment}({self.sentiment_score}) "
-            f"imp{self.importance} risk{self.risk_score} conf{self.confidence} "
-            f"confirmed{self.confirmed_score}")]
+            f"imp{self.importance} risk{self.risk_score} conf{self.confidence}")]
         if filing:
             lines.append(filing)
-        if self.fact_check:
-            lines.append(f"       Fact-check: {self.fact_check}")
-        if self.verdict:
-            lines.append(f"       Verdict: {self.verdict}")
+        if self.reason:
+            lines.append(f'       Reason: "{self.reason}"')
         if self.summary:
             lines.append(f"       Summary: {' '.join(self.summary.split())}")
         if self.keywords:
             lines.append(f"       Keywords: {', '.join(self.keywords)}")
-        if self.reason:
-            lines.append(f'       Reason: "{self.reason}"')
         lines.append(
             f" Overall: hard_block={self.hard_block}"
             + (f" ({self.hard_block_reason})" if self.hard_block else "")
-            + (f" · generated {self.created_at}" if self.created_at else ""))
+            + (f" · generated {self.collected_at}" if self.collected_at else ""))
         return "\n".join(lines)
 
 
 # ── 뉴스 결과 (단독) ─────────────────────────────────────
 
 class NewsBundle(BaseModel):
-    """뉴스 분석 결과 — 종목당 1개, 공시와 완전 분리."""
+    """뉴스 분석 결과 — 종목당 1개 스냅샷, 공시와 완전 분리. 28필드(명세 수용)."""
     ticker: str
-    company_name: str | None = None
-    category: str | None = None
-    as_of: str
-    created_at: str = ""                  # 레코드 생성 시각(초 포함, DB 생성일 성격)
+    trade_date: str                       # 분석 기준일(FK→tb_daily_pick), 구 as_of
+    collected_at: str = ""                # 스냅샷 생성 시각(초 포함, PK), 구 created_at
     has_signal: int = 0                   # 0/1 (신호 유무)
     # 뉴스 원문 식별 (대표 기사, 전달용)
-    news_title: str = ""                  # 뉴스 제목
-    source: str = ""                      # 출처 언론사
-    published_at: str = ""                # 업로드 일시(초 포함)
+    news_title: str = ""                  # 대표 기사 제목
+    source: str = ""                      # 대표 기사 출처 언론사
+    published_at: str = ""                # 대표 기사 발행 일시(초 포함)
     # 건수
     news_count: int = 0
     news_confirmed: int = 0
     news_rumor: int = 0
     # 뉴스 대표 신호 (0~1)
     event_type: str = "other"
-    sentiment: str = "neutral"           # 방향 라벨(sentiment_score에서 파생)
-    sentiment_score: float = 0.5         # 0~1: 0=강악재·0.5=중립·1=강호재
-    importance: float = 0.0              # 0~1 (강도, 신뢰가중)
-    peak_importance: float = 0.0         # 0~1 (집계 전 최고 잠재)
-    risk_score: float = 0.0              # 0~1
-    confidence: float = 0.0              # 0~1
-    source_trust: float = 0.0            # 0~1 (뉴스 전용, LLM 판단)
-    grade_score: float = 0.0             # 0~1 (출처 정책등급: ALLOW1·GRAY.6·BLOCK0)
-    confirmed_score: float = 0.0         # 0~1 (확정 비율 = 확정건수/전체)
+    sentiment: str = "neutral"            # 방향 라벨(sentiment_score에서 파생)
+    sentiment_score: float = 0.5          # 0~1: 0=강악재·0.5=중립·1=강호재
+    reason: str = ""                      # sentiment_score 근거 한 줄(대표 기사)
+    importance: float = 0.0               # 0~1 (강도, 신뢰가중 평균)
+    peak_importance: float = 0.0          # 0~1 (집계 전 최고 잠재)
+    risk_score: float = 0.0               # 0~1
+    confidence: float = 0.0               # 0~1 (LLM 분석 확신도)
+    source_trust: float = 0.0             # 0~1 (뉴스 전용, LLM 판단·사후)
+    grade_score: float = 0.0              # 0~1 (출처 정책등급·코드·사전: ALLOW1·GRAY.6·BLOCK0)
+    confirmed_score: float = 0.0          # 0~1 (확정 비율 = 확정건수/전체)
     fact_check: str = ""                  # 팩트체크 상태 한 문장(코드 판정)
     # 안전장치
-    hard_block: int = 0                   # 0/1 (안전장치 override)
+    hard_block: int = 0                   # 0/1 (매수 즉시 차단)
     hard_block_reason: str | None = None
     # 근거 · 전문 요약
-    top_evidence: list[str] = Field(default_factory=list)
-    reason: str = ""                      # 한 줄 근거(대표 기사)
-    verdict: str = ""                     # 검증 결과 한 문장(호재/악재 판단, 대표 기사)
+    top_evidence: list[str] = Field(default_factory=list)   # 근거가 된 헤드라인 목록
     summary: str = ""                     # 뉴스 전문 3~4줄 요약(대표 기사)
-    keywords: list[str] = Field(default_factory=list)   # 핵심 키워드 5개
-    ref: str = ""
+    keywords: list[str] = Field(default_factory=list)       # 핵심 키워드 5개
+    ref: str = ""                         # 대표 기사 원문 링크(공시와 달리 중복 아님)
 
     def to_prompt(self) -> str:
-        head = _head(self.ticker, self.company_name, self.category, "News", self.as_of)
+        head = _head(self.ticker, "News", self.trade_date)
         if not self.has_signal:
             return head + f"\n News: {self.news_count} items · no signal"
         peak = (f" [peak imp{self.peak_importance}·low-conf]"
@@ -199,10 +178,10 @@ class NewsBundle(BaseModel):
             f"conf{self.confidence}{peak}")]
         if self.source or self.published_at:
             lines.append(f"       Source: {self.source} · published {self.published_at}")
+        if self.reason:
+            lines.append(f'       Reason: "{self.reason}"')
         if self.fact_check:
             lines.append(f"       Fact-check: {self.fact_check}")
-        if self.verdict:
-            lines.append(f"       Verdict: {self.verdict}")
         if self.summary:
             lines.append(f"       Summary: {' '.join(self.summary.split())}")
         if self.keywords:
@@ -212,22 +191,18 @@ class NewsBundle(BaseModel):
         lines.append(
             f" Overall: hard_block={self.hard_block}"
             + (f" ({self.hard_block_reason})" if self.hard_block else "")
-            + (f" · generated {self.created_at}" if self.created_at else ""))
+            + (f" · generated {self.collected_at}" if self.collected_at else ""))
         return "\n".join(lines)
 
 
 # ── 빌더 ────────────────────────────────────────────────
 
-def build_disclosure_bundle(ticker: str, as_of: str, disclosure_result: Any = None,
-                            company_name: str | None = None,
-                            category: str | None = None) -> DisclosureBundle:
-    b = DisclosureBundle(ticker=ticker.upper(), as_of=as_of,
-                         company_name=company_name, category=category)
-    b.created_at = _now()
+def build_disclosure_bundle(ticker: str, trade_date: str,
+                            disclosure_result: Any = None) -> DisclosureBundle:
+    b = DisclosureBundle(ticker=ticker.upper(), trade_date=trade_date)
+    b.collected_at = _now()
     if disclosure_result is None:
         return b
-    b.company_name = company_name or getattr(
-        disclosure_result.item, "company_name", None)
     # 공시 원문 식별 (신호 유무와 무관하게 전달)
     meta = getattr(disclosure_result.item, "meta", {}) or {}
     b.filing_title = getattr(disclosure_result.item, "title", "") or ""
@@ -242,8 +217,6 @@ def build_disclosure_bundle(ticker: str, as_of: str, disclosure_result: Any = No
         return b
     conf = _CERTAINTY.get(getattr(sig, "certainty_level", None), 0.5)
     b.has_signal = 1
-    b.confirmed_score = 1.0              # 공시 = 법적 의무 제출 = 확정 사실
-    b.fact_check = _fact_check_disclosure()
     b.event_type = norm_event(getattr(sig, "event_type", None))
     b.sentiment = getattr(sig, "sentiment", None) or "neutral"
     b.importance = _n10(getattr(sig, "importance", 0))
@@ -253,11 +226,8 @@ def build_disclosure_bundle(ticker: str, as_of: str, disclosure_result: Any = No
     b.sentiment_score = _senti_score(_sign(b.sentiment) * b.importance, b.confidence)
     b.risk_score = _n10(getattr(sig, "risk_score", 0))
     b.reason = getattr(sig, "reason", "") or ""
-    b.verdict = getattr(sig, "verdict", "") or ""
     b.summary = getattr(sig, "summary", "") or ""
     b.keywords = list(getattr(sig, "keywords", []) or [])
-    b.ref = meta.get("accession_no") or getattr(
-        disclosure_result.item, "url", "") or ""
     return b
 
 
@@ -269,12 +239,10 @@ def _news_conf(sig: Any) -> float:
     return max(0.0, min(1.0, c))
 
 
-def build_news_bundle(ticker: str, as_of: str, news_results: list | None = None,
-                      company_name: str | None = None,
-                      category: str | None = None) -> NewsBundle:
-    b = NewsBundle(ticker=ticker.upper(), as_of=as_of,
-                   company_name=company_name, category=category)
-    b.created_at = _now()
+def build_news_bundle(ticker: str, trade_date: str,
+                      news_results: list | None = None) -> NewsBundle:
+    b = NewsBundle(ticker=ticker.upper(), trade_date=trade_date)
+    b.collected_at = _now()
     results = news_results or []
 
     # hard_block — 어느 뉴스든 BLOCK류면 발동
@@ -344,7 +312,6 @@ def build_news_bundle(ticker: str, as_of: str, news_results: list | None = None,
     rep = scored[0][0]
     b.event_type = norm_event(rep.signal.event_type)
     b.reason = rep.signal.reason or ""
-    b.verdict = getattr(rep.signal, "verdict", "") or ""
     b.summary = getattr(rep.signal, "summary", "") or ""
     b.keywords = list(getattr(rep.signal, "keywords", []) or [])
     # 대표 기사 원문 식별 (전달용)

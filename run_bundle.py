@@ -1,11 +1,12 @@
 """
 Bundle 생성기 — 한 종목의 공시·뉴스를 돌려 Strategist 입력 번들 2개를 만든다.
 
-    python run_bundle.py --ticker NVDA --form 8-K --news-limit 8 --category "반도체" --llm
+    python run_bundle.py --ticker NVDA --form 8-K --news-limit 8 --llm --save
 
 공시·뉴스는 **완전 별개 2객체**(DisclosureBundle / NewsBundle)로 분리 산출한다.
-모든 점수는 0~1 소수점, 방향은 sentiment 라벨. category는 스크리닝 에이전트가 전달.
-(회의 피드백 2026-07-02 반영)
+모든 점수는 0~1 소수점, 방향은 sentiment 라벨.
+--save 면 tb_disclosure/tb_news 스냅샷으로 저장(Strategist가 최신 행 읽음).
+(팀 명세 2026-07-06 반영: 회사명·카테고리는 tb_universe JOIN, 번들에서 제거)
 """
 from __future__ import annotations
 
@@ -32,10 +33,10 @@ def main() -> None:
     ap.add_argument("--ticker", default="NVDA")
     ap.add_argument("--form", default="8-K", choices=["8-K", "10-Q", "10-K", "4"])
     ap.add_argument("--news-limit", type=int, default=8)
-    ap.add_argument("--category", default=None,
-                    help="종목 카테고리(섹터). 실제로는 스크리닝 에이전트가 전달.")
     ap.add_argument("--llm", action="store_true")
     ap.add_argument("--json", action="store_true", help="번들 JSON도 출력")
+    ap.add_argument("--save", action="store_true",
+                    help="tb_disclosure/tb_news 스냅샷으로 저장")
     args = ap.parse_args()
 
     run_llm = args.llm and bool(
@@ -56,14 +57,17 @@ def main() -> None:
     print(f"   뉴스 {len(items)}건 수집 · 사전필터 통과 {passed}\n")
 
     # 3) 번들 — 공시·뉴스 완전 별개 2객체
-    as_of = date.today().isoformat()
-    company = getattr(disc.item, "company_name", None)
+    trade_date = date.today().isoformat()
     d_bundle = build_disclosure_bundle(
-        args.ticker, as_of, disclosure_result=disc,
-        company_name=company, category=args.category)
+        args.ticker, trade_date, disclosure_result=disc)
     n_bundle = build_news_bundle(
-        args.ticker, as_of, news_results=news_results,
-        company_name=company, category=args.category)
+        args.ticker, trade_date, news_results=news_results)
+
+    if args.save:
+        from app.storage.db import save_disclosure_bundle, save_news_bundle
+        save_disclosure_bundle(d_bundle)
+        save_news_bundle(n_bundle)
+        print("💾 tb_disclosure/tb_news 스냅샷 저장\n")
 
     print("=" * 60)
     print("📄 DisclosureBundle.to_prompt() — Strategist 입력(공시):\n")

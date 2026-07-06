@@ -99,8 +99,8 @@
       <a href="#s1">01 · 출처(어디서 오나) 5종</a>
       <a href="#s2">02 · 공통 규약(정규화·매핑)</a>
       <div class="grp">필드 사전</div>
-      <a href="#s3">03 · 공시 24필드</a>
-      <a href="#s4">04 · 뉴스 31필드</a>
+      <a href="#s3">03 · 공시 18필드</a>
+      <a href="#s4">04 · 뉴스 28필드</a>
       <div class="grp">판단 근거·경계</div>
       <a href="#s5">05 · sentiment_score</a>
       <a href="#s6">06 · confidence·importance</a>
@@ -123,8 +123,8 @@
     <h1>정보분석 결과값 — 필드 레퍼런스</h1>
     <p class="tag">공시·뉴스 분석이 Strategist에게 넘기는 <b>모든 값의 출처·산출식·수치 근거·등급 경계</b>를 필드 하나씩 정리한 팀 공유 문서. "이 숫자 어디서 나왔고 어떤 기준이냐"에 대한 단일 참조.</p>
     <div class="badges">
-      <span class="badge">공시 24필드 · 뉴스 31필드</span>
-      <span class="badge">정식 전달 = JSON</span>
+      <span class="badge">공시 18필드 · 뉴스 28필드</span>
+      <span class="badge">정식 전달 = DB 스냅샷(tb_disclosure/tb_news)</span>
       <span class="badge">자유서술·라벨 = 영어</span>
       <span class="badge">점수 = 0~1 소수점</span>
     </div>
@@ -136,13 +136,13 @@
     <div class="card">
       <p style="margin-top:0"><b>대상</b> — 정보분석 파트가 산출하는 <code>DisclosureBundle</code>(공시)·<code>NewsBundle</code>(뉴스) 두 객체. 종목당 각각 1개씩, <b>완전 별개</b>로 Strategist에게 전달된다(합치기는 Strategist 몫).</p>
       <ul>
-        <li><b>정식 전달 = JSON</b> (<code>model_dump_json()</code>). 모든 값이 숫자(0~1 float·0/1 int·카운트) 또는 짧은 문자열이라 파싱·검증이 안정적.</li>
-        <li><b>보조 = <code>to_prompt()</code></b> — 사람/LLM이 읽는 압축 텍스트(같은 객체의 다른 표현). §14 참고.</li>
-        <li><b>부 경로 = DB 사본</b>(<code>disclosure_signals</code>/<code>news_signals</code>) — audit·백테스트·결정저널용.</li>
-        <li><b>출력 언어</b> — 자유서술(<code>summary</code>·<code>verdict</code>·<code>reason</code>)과 <code>to_prompt()</code> 라벨은 <b>영어</b>(Strategist 에이전트가 읽음). enum·점수는 공통.</li>
+        <li><b>정식 전달 = 공유 DB 스냅샷 테이블</b> — 두 객체를 <code>tb_disclosure</code>(18컬럼)·<code>tb_news</code>(28컬럼)에 저장. <b>PK = <code>(ticker, collected_at)</code></b>, 새 공시/기사가 뜰 때마다 <b>새 행 append(시계열 누적, 덮어쓰기 X)</b>. Strategist는 종목별 <b>최신 행을 JOIN</b>해 읽는다(저장 <code>save_*_bundle</code> / 읽기 <code>latest_disclosure</code>·<code>latest_news</code>).</li>
+        <li><b>보조 = <code>to_prompt()</code> / JSON</b> — 사람·LLM이 읽는 압축 텍스트·직렬화(같은 객체의 다른 표현). 값이 숫자(0~1 float·0/1 int·카운트) 또는 짧은 문자열이라 파싱·검증이 안정적. §14 참고.</li>
+        <li><b>부 경로 = per-signal 분석로그</b>(<code>disclosure_signals</code>/<code>news_signals</code>) — 스케줄러·백테스트·결정저널용. 전략가 출력용 <code>tb_*</code> 스냅샷과는 <b>별개</b> 테이블(그대로 유지).</li>
+        <li><b>출력 언어</b> — 자유서술(<code>summary</code>·<code>reason</code>)과 <code>to_prompt()</code> 라벨은 <b>영어</b>(Strategist 에이전트가 읽음). enum·점수는 공통.</li>
       </ul>
     </div>
-    <div class="callout c-warn"><b>⚠️ 뉴스 값은 "대표 기사" 기준</b> — 뉴스는 종목당 여러 건을 <b>1개로 집계</b>한다. <code>event_type</code>·<code>verdict</code>·<code>summary</code>·<code>keywords</code>·<code>news_title</code>·<code>source</code>·<code>published_at</code>은 <b>신뢰가중으로 뽑힌 대표 기사</b>의 값이고, <code>sentiment_score</code>·<code>importance</code>·<code>risk_score</code> 등 점수는 <b>전체 신뢰가중 집계</b>값이다(§6).</div>
+    <div class="callout c-warn"><b>⚠️ 뉴스 값은 "대표 기사" 기준</b> — 뉴스는 종목당 여러 건을 <b>1개로 집계</b>한다. <code>event_type</code>·<code>summary</code>·<code>keywords</code>·<code>news_title</code>·<code>source</code>·<code>published_at</code>은 <b>신뢰가중으로 뽑힌 대표 기사</b>의 값이고, <code>sentiment_score</code>·<code>importance</code>·<code>risk_score</code> 등 점수는 <b>전체 신뢰가중 집계</b>값이다(§6).</div>
   </section>
 
   <!-- 1 -->
@@ -175,43 +175,39 @@
 
   <!-- 3 -->
   <section id="s3">
-    <h2><span class="n">03</span> 공시 (DisclosureBundle) — 24필드</h2>
+    <h2><span class="n">03</span> 공시 (DisclosureBundle) — 18필드</h2>
+    <p class="lead"><code>tb_disclosure</code> 스냅샷 테이블 18컬럼. PK=<code>(ticker, collected_at)</code>. <span style="color:var(--dim)">company_name·category는 <code>tb_universe</code> JOIN으로 읽어 번들에서 제외.</span></p>
     <table>
       <tr><th>필드</th><th>타입·범위</th><th>출처</th><th>산출식 / 판단 근거</th></tr>
-      <tr><td class="fname">ticker</td><td>str</td><td><span class="src s-scr">스크리닝</span></td><td>대문자 티커. 수집·저장 키</td></tr>
-      <tr><td class="fname">company_name</td><td>str | null</td><td><span class="src s-sec">SEC</span></td><td>SEC <code>company_tickers.json</code> 자동 매핑(스크리닝이 주면 우선)</td></tr>
-      <tr><td class="fname">category</td><td>str | null</td><td><span class="src s-scr">스크리닝</span></td><td>섹터/테마 라벨. <b>그대로 통과</b>(우리 미가공)</td></tr>
-      <tr><td class="fname">as_of</td><td>str (날짜)</td><td><span class="src s-sys">시스템</span></td><td>분석 기준일 <code>YYYY-MM-DD</code></td></tr>
-      <tr><td class="fname">created_at</td><td>str (일시)</td><td><span class="src s-sys">시스템</span></td><td>레코드 생성 시각(UTC ISO, <b>초 포함</b>). DB 생성일 성격</td></tr>
+      <tr><td class="fname">ticker</td><td>str</td><td><span class="src s-scr">스크리닝</span></td><td>대문자 티커. 수집·저장 키(PK 일부)</td></tr>
+      <tr><td class="fname">trade_date</td><td>str (날짜)</td><td><span class="src s-sys">시스템</span></td><td>분석 기준일 <code>YYYY-MM-DD</code> <i>(구 <code>as_of</code>)</i></td></tr>
+      <tr><td class="fname">collected_at</td><td>str (일시)</td><td><span class="src s-sys">시스템</span></td><td>수집·레코드 생성 시각(UTC ISO, <b>초 포함</b>). <b>PK 일부</b> — 새 행마다 갱신 <i>(구 <code>created_at</code>)</i></td></tr>
       <tr><td class="fname">has_signal</td><td>0 / 1</td><td><span class="src s-code">코드</span></td><td>LLM 분석 신호가 있으면 1(없으면 아래 신호값은 기본값)</td></tr>
       <tr><td class="fname">filing_title</td><td>str</td><td><span class="src s-sec">SEC</span></td><td><b>공시 제목</b> (8-K: <code>"TICKER 8-K — Item X"</code> 형태로 수집기가 생성)</td></tr>
-      <tr><td class="fname">filing_no</td><td>str</td><td><span class="src s-sec">SEC</span></td><td><b>공시 번호</b> = accession number (submissions)</td></tr>
+      <tr><td class="fname">filing_no</td><td>str</td><td><span class="src s-sec">SEC</span></td><td><b>공시 번호</b> = accession number (submissions). 원문 역추적 ID</td></tr>
       <tr><td class="fname">filed_at</td><td>str (일시)</td><td><span class="src s-sec">SEC</span></td><td><b>업로드 일시(초 포함)</b> = <code>acceptanceDateTime</code> 우선, 없으면 <code>filingDate</code>(날짜)</td></tr>
       <tr><td class="fname">event_type</td><td>11종 enum</td><td><span class="src s-llm">LLM</span> <span class="src s-code">코드</span></td><td>LLM 분류 → <code>ontology.norm_event</code> 정규화(§13). 8-K는 Item 기본값도 참고(§12)</td></tr>
       <tr><td class="fname">sentiment</td><td>pos/neg/neutral/mixed</td><td><span class="src s-llm">LLM</span></td><td>방향 라벨. <code>sentiment_score</code>와 함께 병기</td></tr>
       <tr><td class="fname">sentiment_score</td><td>0~1</td><td><span class="src s-code">코드</span></td><td>0=강악재·0.5=중립·1=강호재. <b>호재만 confidence로 감쇠</b>(§5)</td></tr>
+      <tr><td class="fname">reason</td><td>str (영어)</td><td><span class="src s-llm">LLM</span></td><td>한 줄 근거(수치 포함 권장)</td></tr>
       <tr><td class="fname">importance</td><td>0~1</td><td><span class="src s-llm">LLM</span>→<span class="src s-code">코드</span></td><td>강도(방향 뺀 크기). LLM 0~10 → <code>/10</code></td></tr>
       <tr><td class="fname">risk_score</td><td>0~1</td><td><span class="src s-llm">LLM</span>→<span class="src s-code">코드</span></td><td>하방 위험. LLM 0~10 → <code>/10</code>. 하드룰 감지 시 최소값 보정</td></tr>
       <tr><td class="fname">confidence</td><td>0~1</td><td><span class="src s-code">코드</span></td><td><code>certainty_level</code> 매핑(High .9/Med .6/Low .3)</td></tr>
-      <tr><td class="fname">confirmed_score</td><td>0~1</td><td><span class="src s-code">코드</span></td><td><b>공시=1.0 고정</b> (법적 의무 제출 = 도장 찍힌 사실)</td></tr>
-      <tr><td class="fname">fact_check</td><td>str (영어)</td><td><span class="src s-code">코드</span></td><td>공시=<code>"Verified — official SEC filing (legally binding fact)."</code> (§9)</td></tr>
       <tr><td class="fname">hard_block</td><td>0 / 1</td><td><span class="src s-code">코드</span></td><td>최종권한이 <code>BLOCK_ALL/BLOCK_BUY</code>면 1 → 매수 override(§10)</td></tr>
       <tr><td class="fname">hard_block_reason</td><td>str | null</td><td><span class="src s-code">코드</span></td><td>차단 사유(하드룰 종류 등)</td></tr>
-      <tr><td class="fname">reason</td><td>str (영어)</td><td><span class="src s-llm">LLM</span></td><td>한 줄 근거(수치 포함 권장)</td></tr>
-      <tr><td class="fname">verdict</td><td>str (영어)</td><td><span class="src s-llm">LLM</span></td><td>검증 결과 한 문장. 맨 앞 <code>Bullish/Bearish/Neutral</code> + 근거</td></tr>
       <tr><td class="fname">summary</td><td>str (영어)</td><td><span class="src s-llm">LLM</span></td><td>공시 전문 3~4줄 요약(원문 근거만, 환각 방지)</td></tr>
       <tr><td class="fname">keywords</td><td>list[str] (영어)</td><td><span class="src s-llm">LLM</span></td><td>핵심 키워드 5개(검색/태깅)</td></tr>
-      <tr><td class="fname">ref</td><td>str</td><td><span class="src s-sec">SEC</span></td><td>accession/링크 — 감사추적·백테스트 replay</td></tr>
     </table>
+    <div class="callout c-info"><b>💡 삭제된 6필드</b> — <code>company_name</code>·<code>category</code>(→<code>tb_universe</code> JOIN), <code>confirmed_score</code>(공시는 늘 1.0=정보량 0), <code>fact_check</code>(늘 "Verified" 상수), <code>verdict</code>(<code>sentiment_score</code>+<code>reason</code> 재진술), <code>ref</code>(<code>filing_no</code>가 이미 역추적 ID라 중복). 모두 <b>뉴스에는 남는다</b>(값이 가변이거나 filing_no가 없음).</div>
   </section>
 
   <!-- 4 -->
   <section id="s4">
-    <h2><span class="n">04</span> 뉴스 (NewsBundle) — 31필드</h2>
-    <p class="lead">식별·점수 규약은 공시와 같고, <b>건수·출처신뢰·화제 축</b>이 추가된다. 대표 기사 표기는 <span class="src s-rss">RSS</span>(대표), 집계 점수는 <span class="src s-code">코드</span>.</p>
+    <h2><span class="n">04</span> 뉴스 (NewsBundle) — 28필드</h2>
+    <p class="lead">식별·점수 규약은 공시와 같고, <b>건수·출처신뢰·화제 축</b>이 추가된다. 대표 기사 표기는 <span class="src s-rss">RSS</span>(대표), 집계 점수는 <span class="src s-code">코드</span>. <code>tb_news</code> 스냅샷 28컬럼, PK=<code>(ticker, collected_at)</code>.</p>
     <table>
       <tr><th>필드</th><th>타입·범위</th><th>출처</th><th>산출식 / 판단 근거</th></tr>
-      <tr><td class="fname">ticker / company_name / category / as_of / created_at / has_signal</td><td>—</td><td>—</td><td>공시와 동일(§3)</td></tr>
+      <tr><td class="fname">ticker / trade_date / collected_at / has_signal</td><td>—</td><td>—</td><td>공시와 동일(§3). <code>trade_date</code>=구 <code>as_of</code>, <code>collected_at</code>=구 <code>created_at</code></td></tr>
       <tr><td class="fname">news_title</td><td>str</td><td><span class="src s-rss">RSS</span></td><td><b>대표 기사</b> 제목</td></tr>
       <tr><td class="fname">source</td><td>str</td><td><span class="src s-rss">RSS</span></td><td><b>대표 기사</b> 출처 언론사(RSS <code>&lt;source&gt;</code> 태그)</td></tr>
       <tr><td class="fname">published_at</td><td>str (일시)</td><td><span class="src s-rss">RSS</span></td><td><b>대표 기사</b> 발행 일시(초 포함, RSS <code>pubDate</code>)</td></tr>
@@ -221,6 +217,7 @@
       <tr><td class="fname">event_type</td><td>11종 enum</td><td><span class="src s-llm">LLM</span>(대표)</td><td>대표 기사 event_type 정규화(§13)</td></tr>
       <tr><td class="fname">sentiment</td><td>pos/neg/neutral/mixed</td><td><span class="src s-code">코드</span></td><td><b>sentiment_score에서 파생</b> — 라벨↔점수 항상 일치. 호·악재 둘 다 유의미하면 mixed(§6)</td></tr>
       <tr><td class="fname">sentiment_score</td><td>0~1</td><td><span class="src s-code">코드</span></td><td>집계 방향×강도를 0~1로, 호재만 confidence 감쇠(§5·§6)</td></tr>
+      <tr><td class="fname">reason</td><td>str (영어)</td><td><span class="src s-llm">LLM</span>(대표)</td><td>대표 기사의 한 줄 근거(수치 포함 권장, §3과 동일 규약)</td></tr>
       <tr><td class="fname">importance</td><td>0~1</td><td><span class="src s-code">코드</span></td><td><b>부호 없는 강도의 신뢰가중 평균</b> — 방향과 독립(호·악재 섞여도 상쇄 안 됨)</td></tr>
       <tr><td class="fname">peak_importance</td><td>0~1</td><td><span class="src s-code">코드</span></td><td>집계 전 최고 잠재 강도 = <code>max(importance)/10</code>. "잠재 큰데 저신뢰라 눌린" 경우 병기용</td></tr>
       <tr><td class="fname">risk_score</td><td>0~1</td><td><span class="src s-code">코드</span></td><td>신뢰가중 평균</td></tr>
@@ -231,8 +228,8 @@
       <tr><td class="fname">fact_check</td><td>str (영어)</td><td><span class="src s-code">코드</span></td><td>확정비율·신뢰·등급으로 판정(§9). 예 <code>"Verified — 2/3 confirmed, trust 0.88, grade 0.95."</code></td></tr>
       <tr><td class="fname">hard_block / hard_block_reason</td><td>0/1 · str|null</td><td><span class="src s-code">코드</span></td><td>어느 뉴스든 BLOCK류 권한이면 1(§10)</td></tr>
       <tr><td class="fname">top_evidence</td><td>list[str]</td><td><span class="src s-code">코드</span></td><td>대표 근거 헤드라인 <code>"source: title"</code></td></tr>
-      <tr><td class="fname">reason / verdict / summary / keywords</td><td>str·list (영어)</td><td><span class="src s-llm">LLM</span>(대표)</td><td>대표 기사의 근거·호재/악재 판정·요약·키워드(§3과 동일 규약)</td></tr>
-      <tr><td class="fname">ref</td><td>str</td><td><span class="src s-rss">RSS</span></td><td>대표 기사 링크</td></tr>
+      <tr><td class="fname">summary / keywords</td><td>str·list (영어)</td><td><span class="src s-llm">LLM</span>(대표)</td><td>대표 기사의 요약·키워드(§3과 동일 규약)</td></tr>
+      <tr><td class="fname">ref</td><td>str</td><td><span class="src s-rss">RSS</span></td><td>대표 기사 링크. <b>뉴스 전용</b>(공시는 filing_no가 대체해 제외)</td></tr>
     </table>
   </section>
 
@@ -274,7 +271,7 @@ weight = certainty(High.9/Med.6/Low.3)
       <tr><td><code>sentiment</code>(라벨)</td><td><b>sentiment_score에서 파생</b>(라벨↔점수 일치): 강한 악재→<code>negative</code> · 호·악재 둘 다 신뢰가중 ≥30%→<code>mixed</code> · 그 외 &gt;0.5=positive·&lt;0.5=negative·=0.5=neutral</td></tr>
       <tr><td><code>risk_score</code>·<code>source_trust</code>·<code>grade_score</code></td><td>기사별 값의 <b>신뢰가중 평균</b></td></tr>
       <tr><td><code>confidence</code></td><td>기사별 weight의 <b>단순 평균</b>(루머 많으면 급락)</td></tr>
-      <tr><td><b>대표 기사</b></td><td><code>importance × weight</code>(신뢰가중)가 <b>최대</b>인 기사 → event_type·verdict·summary·keywords·news_title·source 등이 이 기사</td></tr>
+      <tr><td><b>대표 기사</b></td><td><code>importance × weight</code>(신뢰가중)가 <b>최대</b>인 기사 → event_type·reason·summary·keywords·news_title·source 등이 이 기사</td></tr>
     </table>
     <div class="callout c-info"><b>💡 예</b> — NVDA 8건 중 확정 1·루머 7 → 각 weight가 낮아 <code>confidence≈0.14</code>로 하락. 시끄러운 루머(imp9·저신뢰)와 확정 실적(imp6·고신뢰)이 붙으면 <code>imp×weight</code>가 큰 <b>확정 실적이 대표</b>가 된다.</div>
   </section>
@@ -316,9 +313,7 @@ weight = certainty(High.9/Med.6/Low.3)
   <!-- 9 -->
   <section id="s9">
     <h2><span class="n">09</span> fact_check — 팩트체크 판정 규칙</h2>
-    <p class="lead"><b>코드로 결정</b>(LLM 비용 0). 확정비율·출처신뢰·등급을 조합해 한 문장으로.</p>
-    <h4>공시</h4>
-    <p style="margin:4px 0"><code>"Verified — official SEC filing (legally binding fact)."</code> (법적 의무 제출이라 항상 Verified)</p>
+    <p class="lead"><b>코드로 결정</b>(LLM 비용 0). 확정비율·출처신뢰·등급을 조합해 한 문장으로. <b>뉴스 전용 필드</b> — 공시는 늘 <code>"Verified"</code> 상수라 번들에서 제외했다(값 변동 없음 = 정보량 0).</p>
     <h4>뉴스 <span style="color:var(--dim);font-weight:400;font-size:13px">— ratio = news_confirmed / news_count</span></h4>
     <table>
       <tr><th>판정</th><th>조건(경계)</th></tr>
@@ -392,40 +387,37 @@ weight = certainty(High.9/Med.6/Low.3)
   <section id="s14">
     <h2><span class="n">14</span> 실물 예시 (to_prompt · JSON)</h2>
     <h4>공시 to_prompt()</h4>
-    <pre><code>[NVDA · NVIDIA CORP · Semiconductors] Disclosure as_of 2026-07-03
- Disclosure: ma / positive(0.86) imp0.8 risk0.2 conf0.9 confirmed1.0
+    <pre><code>[NVDA] Disclosure · 2026-07-03
+ Disclosure: ma / positive(0.86) imp0.8 risk0.2 conf0.9
        Filing: "NVDA 8-K — Item 1.01 Entry into Material Agreement" · No 0001045810-26-000123 · filed 2026-07-03T16:30:12.000Z
-       Fact-check: Verified — official SEC filing (legally binding fact).
-       Verdict: Bullish — large all-cash acquisition, near-term upside likely (high trust).
+       Reason: "Large acquisition announced (30% premium)"
        Summary: Acquirer to buy Target for 35% cash premium. Deal size $10B. Regulatory approval pending.
        Keywords: acquisition, 35% premium, all-cash, regulatory approval, large M&A
-       Reason: "Large acquisition announced (30% premium)"
  Overall: hard_block=0 · generated 2026-07-03T16:31:05+00:00</code></pre>
     <h4>뉴스 to_prompt()</h4>
-    <pre><code>[NVDA · NVIDIA CORP · Semiconductors] News as_of 2026-07-03
+    <pre><code>[NVDA] News · 2026-07-03
  News: 3 items (confirmed2·rumor1) → positive(0.84) imp0.67 trust0.88 grade0.95 conf0.6 [peak imp0.8·low-conf]
        Source: reuters.com · published 2026-07-03T14:30:05+00:00
+       Reason: "Earnings surprise"
        Fact-check: Verified — 2/3 confirmed, trust 0.88, grade 0.95.
-       Verdict: Bullish — confirmed earnings surprise, upside expected.
        Summary: Q2 results beat consensus. Revenue +22% YoY. Guidance raised.
        Keywords: earnings, surprise, revenue +22%, guidance raised, semiconductors
        Evidence: "reuters.com: Nvidia earnings beat expectations Q2"
  Overall: hard_block=0 · generated 2026-07-03T14:31:00+00:00</code></pre>
-    <h4>뉴스 JSON (정식 계약)</h4>
+    <h4>뉴스 JSON (tb_news 스냅샷 행 · 직렬화)</h4>
     <pre><code>{
-  "ticker": "NVDA", "company_name": "NVIDIA CORP", "category": "Semiconductors",
-  "as_of": "2026-07-03", "created_at": "2026-07-03T14:31:00+00:00", "has_signal": 1,
+  "ticker": "NVDA",
+  "trade_date": "2026-07-03", "collected_at": "2026-07-03T14:31:00+00:00", "has_signal": 1,
   "news_title": "Nvidia earnings beat expectations Q2", "source": "reuters.com",
   "published_at": "2026-07-03T14:30:05+00:00",
   "news_count": 3, "news_confirmed": 2, "news_rumor": 1,
   "event_type": "earnings", "sentiment": "positive", "sentiment_score": 0.84,
+  "reason": "Earnings surprise",
   "importance": 0.67, "peak_importance": 0.8, "risk_score": 0.22,
   "confidence": 0.6, "source_trust": 0.88, "grade_score": 0.95, "confirmed_score": 0.67,
   "fact_check": "Verified — 2/3 confirmed, trust 0.88, grade 0.95.",
   "hard_block": 0, "hard_block_reason": null,
   "top_evidence": ["reuters.com: Nvidia earnings beat expectations Q2"],
-  "reason": "Earnings surprise",
-  "verdict": "Bullish — confirmed earnings surprise, upside expected.",
   "summary": "Q2 results beat consensus. Revenue +22% YoY. Guidance raised.",
   "keywords": ["earnings", "surprise", "revenue +22%", "guidance raised", "semiconductors"],
   "ref": "https://..."
@@ -438,7 +430,7 @@ weight = certainty(High.9/Med.6/Low.3)
     <div class="callout c-warn"><b>ALLOW ≠ 매수허용</b> — 출처 등급이 높아도 "분석 반영 가능"일 뿐. 매수 확정은 이 파트가 안 한다.</div>
     <div class="callout c-warn"><b>importance ≠ sentiment_score</b> — <code>importance</code>는 <b>방향 없는 강도</b>(얼마나 중요한 사건인가), <code>sentiment_score</code>는 <b>방향(+강도)</b>. 큰 악재도 importance는 높다.</div>
     <div class="callout c-warn"><b>confidence ≠ source_trust ≠ grade_score</b> — confidence=종합 신뢰(certainty×확정×출처), source_trust=LLM의 출처 판단, grade_score=정책 등급 점수. 셋 다 0~1이지만 근거가 다르다.</div>
-    <div class="callout c-warn"><b>공시 confirmed_score는 항상 1.0</b> — 법적 제출이라 사실. 뉴스만 확정비율로 0~1 변동.</div>
+    <div class="callout c-warn"><b>confirmed_score는 뉴스 전용</b> — 공시는 법적 제출이라 늘 1.0(정보량 0)이므로 번들에서 제외했다. 뉴스만 확정비율(<code>news_confirmed/news_count</code>)로 0~1 변동한다.</div>
     <div class="callout c-info"><b>💡 왜 두 객체 분리?</b> — 공시(사실)와 뉴스(진위 섞임)는 신뢰 성격이 달라 Strategist가 <b>가중치를 다르게</b> 줄 수 있게 별도로 넘긴다. 합치기는 Strategist 몫.</div>
     <div class="divider"></div>
     <p style="color:var(--dim);font-size:13px">Quantinue · 정보분석(공시·뉴스) 결과값 필드 레퍼런스 · collector-agent · 2026-07-03<br>

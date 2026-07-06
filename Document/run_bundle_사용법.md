@@ -1,7 +1,8 @@
 # `run_bundle.py` 사용법 — Strategist 입력 번들 생성기
 
-> 한 종목의 **공시 + 뉴스**를 돌려 **종목당 1개 `AnalysisBundle`**(Strategist 입력)로 집계·출력한다.
-> 계약·근거는 [`인터페이스명세_정보분석→Strategist.md`](인터페이스명세_정보분석→Strategist.md) 참고.
+> 한 종목의 **공시 + 뉴스**를 돌려 **완전 별개 2객체** `DisclosureBundle`(18필드)·`NewsBundle`(28필드)로
+> 산출·출력한다. `--save` 면 **DB 스냅샷** `tb_disclosure`/`tb_news`(PK=(ticker, collected_at))에 append.
+> 계약·근거는 [`데이터스키마_인터페이스명세_v2.md`](데이터스키마_인터페이스명세_v2.md) 참고. (2026-07-06 팀 명세 반영)
 
 ---
 
@@ -29,11 +30,14 @@ LLM_ANALYST_MODEL=openai:gpt-4o-mini
 ## 2. 기본 실행
 
 ```bash
-# 공시(8-K) + 뉴스 8건 → LLM 분석 → 번들 출력
+# 공시(8-K) + 뉴스 8건 → LLM 분석 → 번들 2개 출력
 python run_bundle.py --ticker NVDA --form 8-K --news-limit 8 --llm
 
 # 번들 JSON까지 (코드/PM용 원자료)
 python run_bundle.py --ticker NVDA --form 8-K --llm --json
+
+# tb_disclosure/tb_news 스냅샷으로 저장(전략가가 최신 행 읽음)
+python run_bundle.py --ticker NVDA --form 8-K --llm --save
 ```
 
 Windows PowerShell에서 SEC UA를 인라인으로 줄 때:
@@ -53,6 +57,7 @@ $env:SEC_USER_AGENT="Quantinue you@email.com"; python run_bundle.py --ticker NVD
 | `--news-limit` | `8` | 수집할 뉴스 헤드라인 수 |
 | `--llm` | off | LLM 분석 실행 (없으면 빈 번들) |
 | `--json` | off | 번들 JSON도 함께 출력 |
+| `--save` | off | `tb_disclosure`/`tb_news` 스냅샷으로 저장 |
 
 ---
 
@@ -64,14 +69,24 @@ $env:SEC_USER_AGENT="Quantinue you@email.com"; python run_bundle.py --ticker NVD
    뉴스 8건 수집 · 사전필터 통과 8
 
 ============================================================
-📦 AnalysisBundle.to_prompt() — Strategist가 보는 입력:
+📄 DisclosureBundle.to_prompt() — Strategist 입력(공시):
 
-[NVDA] as_of 2026-07-01
- 공시: management_change / positive(+4) 중요도4 conf0.9 확정
-       "사외이사 10명 선출, 경영진 보수 승인 → 주주 신뢰 높음."
- 뉴스: 8건(확정1·루머7) → positive(+3) 중요도5 conf0.14 [최고imp7·저신뢰]
-       "Investopedia: Nvidia Earnings Live: AI Chip Giant Beats Street Expectation"
- 종합: net_sentiment +4 · hard_block=false
+[NVDA] Disclosure · 2026-07-06
+ Disclosure: management_change / positive(0.86) imp0.4 risk0.2 conf0.9
+       Filing: "Election of Directors" · No 0001... · filed 2026-07-06T16:30:12.000Z
+       Reason: "Board elected 10 outside directors; pay approved — trust up."
+       Summary: ... · Keywords: ...
+ Overall: hard_block=0 · generated 2026-07-06T05:36:19+00:00
+------------------------------------------------------------
+📰 NewsBundle.to_prompt() — Strategist 입력(뉴스):
+
+[NVDA] News · 2026-07-06
+ News: 8 items (confirmed1·rumor7) → positive(0.55) imp0.5 trust0.6 grade0.7 conf0.14 [peak imp0.7·low-conf]
+       Source: Investopedia · published 2026-07-06T14:30:05+00:00
+       Reason: "AI chip earnings beat estimates (single confirmed source)."
+       Fact-check: Partially verified — 1/8 confirmed, trust 0.6, grade 0.7.
+       Evidence: "Investopedia: Nvidia Earnings Live: AI Chip Giant Beats..."
+ Overall: hard_block=0 · generated 2026-07-06T05:36:19+00:00
 ============================================================
 ```
 
@@ -82,18 +97,22 @@ $env:SEC_USER_AGENT="Quantinue you@email.com"; python run_bundle.py --ticker NVD
 ## 5. 출력 읽는 법
 
 ```
-[티커] as_of 날짜
- 공시: {event_type} / {sentiment}({score:±}) 중요도{importance} conf{신뢰0~1} {확정/미확정}
-       "한 줄 근거"
- 뉴스: {건수}(확정n·루머m) → {sentiment}({score:±}) 중요도{importance} conf{신뢰} [최고imp{peak}·저신뢰]
-       "대표 헤드라인"
- 종합: net_sentiment {±} · hard_block={true/false}
+[티커] Disclosure · {trade_date}
+ Disclosure: {event_type} / {sentiment}({sentiment_score 0~1}) imp{0~1} risk{0~1} conf{0~1}
+       Reason: "한 줄 근거"  (+ Summary / Keywords)
+ Overall: hard_block={0/1} · generated {collected_at}
+
+[티커] News · {trade_date}
+ News: {건수}(confirmed n·rumor m) → {sentiment}({sentiment_score 0~1}) imp{0~1} trust{0~1} grade{0~1} conf{0~1} [peak imp{..}·low-conf]
+       Source / Reason / Fact-check / Evidence
+ Overall: hard_block={0/1}
 ```
 
-- `score(±)` : 방향(부호)+강도, −10~+10. PM의 EV 계산이 쓰는 값.
-- `conf` : 신뢰도 0~1. **뉴스가 루머 위주면 낮게** 나옴(정상 — "루머뿐이면 신뢰↓").
-- `[최고imp7·저신뢰]` : 잠재적으론 중요한 뉴스(예 실적)가 있지만 저신뢰라 눌렸다는 표시.
-- `hard_block=true` : 상폐·거래정지·going concern 등 → **매수금지 override** (LLM 판단 무관).
+- `sentiment_score` : 방향+강도, **0~1**(0=강악재·0.5=중립·1=강호재). 호재만 신뢰(conf)로 감쇠.
+- `imp`(importance) : **방향 무관 강도** 0~1. `risk` : 위험도 0~1(별개 축).
+- `conf` : 신뢰도 0~1. **뉴스가 루머 위주면 낮게** 나옴(정상). `trust`=source_trust(LLM)·`grade`=grade_score(코드 도메인등급).
+- `[peak imp0.7·low-conf]` : 잠재적으론 중요한 뉴스(예 실적)가 있지만 저신뢰라 평균에서 눌렸다는 표시.
+- `hard_block=1` : 상폐·거래정지·going concern 등 → **매수금지 override** (LLM 판단 무관).
 
 전체 필드 의미·설계 근거는 명세 문서 §2·§3 참고.
 
@@ -128,7 +147,8 @@ python run_bundle.py --ticker TSLA
 
 ## 8. 관련 파일
 
-- 어댑터/계약: `app/common/analysis_bundle.py`
+- 어댑터/계약: `app/common/analysis_bundle.py` (번들 스키마·빌더)
+- 스냅샷 저장/읽기: `app/storage/db.py` (`tb_disclosure`/`tb_news` · `save_*_bundle`/`latest_*`)
 - 공유 event_type: `app/common/ontology.py` (통일 11종)
-- 명세·근거: `인터페이스명세_정보분석→Strategist.md`
+- 명세·근거: `데이터스키마_인터페이스명세_v2.md` · `결과값_필드_레퍼런스.html`
 - 상세 작업노트: `WORKLOG.md`

@@ -158,15 +158,14 @@ def build_bundles(ticker: str, category: str | None, company_name: str | None,
     items = fetch_latest_news(ticker, limit=news_limit)
     news_results = [run_news_pipeline(it, run_llm=run_llm) for it in items]
 
-    as_of = date.today().isoformat()
-    # 회사명: 스크리닝이 준 것 우선, 없으면 공시 collector가 SEC에서 채운 것
-    company = company_name or getattr(disc.item, "company_name", None)
+    trade_date = date.today().isoformat()
+    # 회사명(company_name)·카테고리(category)는 번들에서 제거됨 — tb_universe에
+    # 이미 있어 Strategist가 JOIN으로 읽는다(팀 명세 2026-07-06). 유니버스 적재는
+    # 별도 경로(로더)가 이미 처리하므로 여기선 번들에 넣지 않는다.
     d_bundle = build_disclosure_bundle(
-        ticker, as_of, disclosure_result=disc,
-        company_name=company, category=category)
+        ticker, trade_date, disclosure_result=disc)
     n_bundle = build_news_bundle(
-        ticker, as_of, news_results=news_results,
-        company_name=company, category=category)
+        ticker, trade_date, news_results=news_results)
     passed = sum(1 for r in news_results if not r.dropped)
     return d_bundle, n_bundle, len(items), passed
 
