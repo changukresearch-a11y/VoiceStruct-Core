@@ -438,7 +438,7 @@ weight = certainty(.9/.6/.3) × (1.0 <span class="kw">if</span> is_confirmed <sp
   <div class="sec-label">Run</div>
   <h2>실행 · 진입점</h2>
   <pre><code><span class="cm"># 단건 번들 (공시+뉴스 → Strategist 입력)</span>
-python run_bundle.py --ticker NVDA --category "Semiconductors" --llm --json
+python run_bundle.py --ticker NVDA --llm --json --save
 
 <span class="cm"># 스크리닝 배치 (50종목 JSON 입력 → 유니버스 적재 + 번들 생성)</span>
 python run_screening_input.py --file screening_input.json --run --llm --json

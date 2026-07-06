@@ -372,7 +372,7 @@
         <li>수집 주기 공시=<b>1시간</b>·뉴스=<b>5분</b>(새 것만). 중복제거 키 공시=accession(<code>filing_no</code>)·뉴스=google_link.</li>
         <li><b>보조 = <code>to_prompt()</code>/<code>model_dump_json()</code></b> — 사람 읽기·프롬프트 삽입용. 정식 계약은 DB 행(또는 그 JSON).</li>
         <li><b>별개 유지</b> — per-signal 로그 <code>disclosure_signals</code>/<code>news_signals</code>(스케줄러·백테스트)는 <code>tb_*</code>와 별개 테이블.</li>
-        <li>엔트리 <code>run_bundle.py --ticker NVDA --category "반도체" --llm</code> → 번들 산출 후 <code>tb_*</code>에 append.</li>
+        <li>엔트리 <code>run_bundle.py --ticker NVDA --llm --save</code> → 번들 산출 후 <code>tb_*</code>에 append. (회사명·카테고리는 tb_universe JOIN이라 인자 없음)</li>
       </ul>
     </div>
     <div class="card">

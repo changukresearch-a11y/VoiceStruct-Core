@@ -143,7 +143,8 @@ python run_scheduler.py --once --limit 3 --forms 8-K,4 --save
 python run_scheduler.py --once --limit 5 --forms 8-K --llm --save
 
 # 뉴스까지 통합해 주기 실행 (15분 간격, Ctrl+C 종료)
-python run_scheduler.py --interval 900 --limit 10 --forms 8-K,10-Q --news --llm --save
+python run_scheduler.py --news --limit 10 --forms 8-K,10-Q --llm --save
+# 이중 주기(명세): 공시 매 1시간·뉴스 매 5분. 조절: --disclosure-interval 3600 --news-interval 300
 ```
 - `--forms`는 쉼표 구분(여러 form 동시). `--news`면 같은 순회에 뉴스도 처리.
 - 재실행 시 이미 처리한 accession은 `unchanged (skip)` — **문서 다운로드/LLM 안 함**.

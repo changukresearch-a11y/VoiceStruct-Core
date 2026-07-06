@@ -7,8 +7,9 @@
     # 1회 + LLM + 저장 (새 공시만 분석·기록)
     python run_scheduler.py --once --limit 5 --forms 8-K --llm --save
 
-    # 뉴스까지 통합해 주기 실행 (15분 간격, Ctrl+C로 종료)
-    python run_scheduler.py --interval 900 --limit 10 --forms 8-K,10-Q --news --llm --save
+    # 뉴스까지 통합해 주기 실행 (공시 1시간·뉴스 5분, Ctrl+C로 종료)
+    python run_scheduler.py --news --limit 10 --forms 8-K,10-Q --llm --save
+    # 주기 조절: --disclosure-interval 3600 --news-interval 300 (기본값=명세)
 
 메타레벨 증분: submissions만 보고 이미 처리한 accession이면 문서 다운로드/LLM을 skip.
 """
@@ -57,8 +58,10 @@ def _render_cycle(report) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true", help="1회만 순회하고 종료")
-    ap.add_argument("--interval", type=int, default=900,
-                    help="주기 실행 간격(초). --once면 무시")
+    ap.add_argument("--disclosure-interval", type=int, default=3600,
+                    help="공시 수집 간격(초, 명세 1시간). --once면 무시")
+    ap.add_argument("--news-interval", type=int, default=300,
+                    help="뉴스 수집 간격(초, 명세 5분). --once면 무시")
     ap.add_argument("--limit", type=int, default=5)
     ap.add_argument("--forms", default="8-K",
                     help="쉼표 구분 (예: 8-K,10-Q,4)")
@@ -83,10 +86,12 @@ def main() -> None:
         report = run_cycle(**kwargs)
         _render_cycle(report)
     else:
-        print(f"▶️  주기 실행: 매 {args.interval}s · limit={args.limit} "
+        print(f"▶️  주기 실행: 공시 매 {args.disclosure_interval}s · "
+              f"뉴스 매 {args.news_interval}s · limit={args.limit} "
               f"forms={forms} news={args.news} llm={run_llm} save={args.save}\n"
               f"   (Ctrl+C로 종료)\n")
-        run_forever(interval_sec=args.interval, **kwargs)
+        run_forever(disclosure_interval_sec=args.disclosure_interval,
+                    news_interval_sec=args.news_interval, **kwargs)
 
 
 if __name__ == "__main__":

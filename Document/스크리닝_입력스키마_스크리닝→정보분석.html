@@ -151,7 +151,7 @@
   <table>
     <tr><th>우리 코드가 받는 것</th><th>어디서 쓰나</th><th>없으면?</th></tr>
     <tr><td><code>ticker</code></td><td>공시/뉴스 수집 키 · <code>companies</code> PK</td><td><b class="c-bad">필수</b> — 없으면 아무것도 못 함</td></tr>
-    <tr><td><code>category</code></td><td>번들에 <b>그대로 통과</b> (우리에게 다른 소스 없음)</td><td>결과에 카테고리가 빔</td></tr>
+    <tr><td><code>category</code></td><td><b>회사 마스터(유니버스/<code>tb_universe</code>) 속성</b> · 전략가가 JOIN으로 읽음. <b>번들엔 미포함</b>(07-06 변경)</td><td>회사 분류가 빔</td></tr>
     <tr><td><code>company_name</code></td><td>표시용</td><td><span class="c-good">SEC에서 자동</span></td></tr>
     <tr><td><code>cik</code></td><td>SEC 조회 키</td><td><span class="c-good">티커로 자동 매핑</span></td></tr>
     <tr><td><code>sector</code></td><td><code>companies.sector</code>(선택)</td><td>비워둠</td></tr>
@@ -187,7 +187,7 @@
   <table>
     <tr><th>필드</th><th>타입</th><th>필수</th><th>우리 쪽 매핑</th><th>설명</th></tr>
     <tr><td><code>ticker</code></td><td class="range">str</td><td class="ctr"><span class="tag t-req">필수</span></td><td>수집 키 · <code>companies.ticker</code></td><td>미국 티커, <b>대문자</b>. 예 <code>NVDA</code>. 클래스주는 SEC 표기(<code>BRK-B</code>)</td></tr>
-    <tr><td><code>category</code></td><td class="range">str</td><td class="ctr"><span class="tag t-rec">권장</span></td><td>번들 <code>category</code> 통과</td><td>종목 분류(섹터/테마). <b>우리가 못 만드는 값</b> → 줄 수 있으면 꼭</td></tr>
+    <tr><td><code>category</code></td><td class="range">str</td><td class="ctr"><span class="tag t-rec">권장</span></td><td>회사 마스터(유니버스) 속성 → 전략가 JOIN</td><td>종목 분류(섹터/테마). <b>우리가 못 만드는 값</b> → 줄 수 있으면 꼭</td></tr>
     <tr><td><code>rank</code></td><td class="range">int</td><td class="ctr"><span class="tag t-rec">권장</span></td><td><code>companies.priority</code></td><td>스크리닝 순위(1=최상위). <b>우리 처리 순서</b>가 됨. 없으면 배열 순서</td></tr>
     <tr><td><code>company_name</code></td><td class="range">str</td><td class="ctr"><span class="tag t-opt">선택</span></td><td><code>companies.name</code></td><td>없으면 SEC에서 자동</td></tr>
     <tr><td><code>cik</code></td><td class="range">str</td><td class="ctr"><span class="tag t-opt">선택</span></td><td><code>companies.cik</code></td><td>10자리(<code>0001045810</code>) 또는 정수. 없으면 자동 매핑</td></tr>
@@ -212,7 +212,7 @@
     <tr><td><b>티커 정규화</b></td><td>대문자, 공백·따옴표 없이. 같은 티커 중복 금지(마지막 것으로 upsert)</td></tr>
     <tr><td><b>개수</b></td><td>50개 전후 자유. <code>count</code>를 주면 배열 길이와 대조 검증</td></tr>
     <tr><td><b>rank 유일성</b></td><td>가능하면 1..N 유니크. 겹치면 우선순위 동률(티커 알파벳순 tie-break)</td></tr>
-    <tr><td><b>category 라벨</b></td><td>값 체계는 합의 대상(§5). 무엇이든 <b>문자열 하나</b>면 우리는 통과시킴</td></tr>
+    <tr><td><b>category 라벨</b></td><td>값 체계는 합의 대상(§5). 무엇이든 <b>문자열 하나</b>면 우리는 회사 마스터에 담아둠(전략가 JOIN)</td></tr>
   </table>
 </section>
 
@@ -225,7 +225,7 @@
       <p style="color:var(--sub);font-size:14px"><code>screening_input.json</code> (UTF-8, §2 형식). 전용 로더 <b><code>run_screening_input.py</code></b> 가 받는다:</p>
       <ol class="steps">
         <li>각 원소를 <b><code>upsert_company()</code></b>로 적재 후 <b><code>priority=rank</code>·<code>active=1</code></b> 확정 <span style="font-size:12.5px">(cik/name 없으면 SEC 자동, <code>--exclusive</code> 면 목록 외 비활성)</span></li>
-        <li><b><code>category</code></b>는 파일→메모리→번들로 <b>그대로 통과</b>(companies 스키마 변경 불필요)</li>
+        <li><b><code>category</code></b>는 회사 분류값 — <b>회사 마스터(유니버스)</b> 속성으로 다룸(번들엔 미포함, 07-06 변경). ※ 현재 로더는 <code>companies</code>에 category/sector 미저장 → 필요 시 후속 구현</li>
         <li><code>--run</code> 이후 또는 별도로 <b>기존 엔트리를 코드 수정 없이 실행</b></li>
       </ol>
     </div>
@@ -235,7 +235,7 @@
 python run_screening_input.py \
   --file screening_input.json --exclusive
 
-<span class="c-com"># 로더 — 적재 + 번들 생성(category 통과)</span>
+<span class="c-com"># 로더 — 적재 + 번들 생성</span>
 python run_screening_input.py \
   --file screening_input.json --run --llm --json
 
@@ -247,7 +247,7 @@ python run_scheduler.py --once --limit 50 \
   </div>
   <div class="callout good">
     <div class="co-t">검증됨</div>
-    견본 <code>screening_input.example.json</code>로 적재(priority=rank 정확)·<code>--exclusive</code> working-set·<code>--run</code> 번들 생성(category "반도체" 양쪽 통과)까지 실측 확인. 기존 서비스 코드는 무수정.
+    견본 <code>screening_input.example.json</code>로 적재(priority=rank 정확)·<code>--exclusive</code> working-set·<code>--run</code> 번들 생성까지 실측 확인. 기존 서비스 코드는 무수정.
   </div>
 </section>
 
@@ -263,7 +263,7 @@ python run_scheduler.py --once --limit 50 \
   <div class="callout good">
     <div class="co-t">소비 지점 (우리 코드)</div>
     <code>app/universe/repository.py</code>(<code>upsert_company</code>·<code>companies</code>) · <code>app/universe/seed.py</code>(적재 패턴) ·
-    <code>app/scheduler/scheduler.py</code>(우선순위 순회) · <code>run_bundle.py</code>(<code>--category</code> 통과)<br>
+    <code>app/scheduler/scheduler.py</code>(우선순위 순회) · <code>run_bundle.py</code>(종목 단건 번들) · <code>run_screening_input.py</code>(로더)<br>
     반대 방향(우리 → Strategist) 출력 계약: <code>데이터스키마_인터페이스명세_v2.html</code>
   </div>
 </section>

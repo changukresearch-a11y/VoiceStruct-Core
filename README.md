@@ -73,8 +73,8 @@ cp .env.example .env    # SEC_USER_AGENT="이름 you@email.com" · OPENAI_API_KE
 - LLM provider = **OpenAI gpt-4o-mini**. SEC·Google News·Yahoo는 키 불필요(SEC는 User-Agent만).
 
 ```bash
-# 단건 번들 (공시+뉴스 → Strategist 입력 2객체)
-python run_bundle.py --ticker NVDA --category "Semiconductors" --llm --json
+# 단건 번들 (공시+뉴스 → Strategist 입력 2객체) · --save 면 tb_disclosure/tb_news 저장
+python run_bundle.py --ticker NVDA --llm --json --save
 
 # 스크리닝 배치 (50종목 JSON 입력 → 유니버스 적재 + 번들 생성)
 python run_screening_input.py --file screening_input.json --run --llm --json
