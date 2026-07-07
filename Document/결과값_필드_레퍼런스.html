@@ -110,7 +110,7 @@
       <a href="#s10">10 · hard_block·권한 6단계</a>
       <a href="#s11">11 · 하드리스크 키워드</a>
       <a href="#s12">12 · 8-K Item 맵</a>
-      <a href="#s13">13 · event_type 11종</a>
+      <a href="#s13">13 · event_type 12종</a>
       <div class="grp">부록</div>
       <a href="#s14">14 · 실물 예시</a>
       <a href="#s15">15 · 자주 오해하는 점</a>
@@ -186,7 +186,7 @@
       <tr><td class="fname">filing_title</td><td>str</td><td><span class="src s-sec">SEC</span></td><td><b>공시 제목</b> (8-K: <code>"TICKER 8-K — Item X"</code> 형태로 수집기가 생성)</td></tr>
       <tr><td class="fname">filing_no</td><td>str</td><td><span class="src s-sec">SEC</span></td><td><b>공시 번호</b> = accession number (submissions). 원문 역추적 ID</td></tr>
       <tr><td class="fname">filed_at</td><td>str (일시)</td><td><span class="src s-sec">SEC</span></td><td><b>업로드 일시(초 포함)</b> = <code>acceptanceDateTime</code> 우선, 없으면 <code>filingDate</code>(날짜)</td></tr>
-      <tr><td class="fname">event_type</td><td>11종 enum</td><td><span class="src s-llm">LLM</span> <span class="src s-code">코드</span></td><td>LLM 분류 → <code>ontology.norm_event</code> 정규화(§13). 8-K는 Item 기본값도 참고(§12)</td></tr>
+      <tr><td class="fname">event_type</td><td>12종 enum</td><td><span class="src s-llm">LLM</span> <span class="src s-code">코드</span></td><td>LLM 분류 → <code>ontology.norm_event</code> 정규화(§13). 8-K는 Item 기본값도 참고(§12)</td></tr>
       <tr><td class="fname">sentiment</td><td>pos/neg/neutral/mixed</td><td><span class="src s-llm">LLM</span></td><td>방향 라벨. <code>sentiment_score</code>와 함께 병기</td></tr>
       <tr><td class="fname">sentiment_score</td><td>0~1</td><td><span class="src s-code">코드</span></td><td>0=강악재·0.5=중립·1=강호재. <b>호재만 confidence로 감쇠</b>(§5)</td></tr>
       <tr><td class="fname">reason</td><td>str (영어)</td><td><span class="src s-llm">LLM</span></td><td>한 줄 근거(수치 포함 권장)</td></tr>
@@ -214,7 +214,7 @@
       <tr><td class="fname">news_count</td><td>int</td><td><span class="src s-code">코드</span></td><td>사전필터 통과 후 <b>LLM 분석된</b> 뉴스 수</td></tr>
       <tr><td class="fname">news_confirmed</td><td>int</td><td><span class="src s-code">코드</span></td><td><code>is_confirmed=True</code> 건수(확정 사실)</td></tr>
       <tr><td class="fname">news_rumor</td><td>int</td><td><span class="src s-code">코드</span></td><td><code>news_count − news_confirmed</code>(추측/루머)</td></tr>
-      <tr><td class="fname">event_type</td><td>11종 enum</td><td><span class="src s-llm">LLM</span>(대표)</td><td>대표 기사 event_type 정규화(§13)</td></tr>
+      <tr><td class="fname">event_type</td><td>12종 enum</td><td><span class="src s-llm">LLM</span>(대표)</td><td>대표 기사 event_type 정규화(§13)</td></tr>
       <tr><td class="fname">sentiment</td><td>pos/neg/neutral/mixed</td><td><span class="src s-code">코드</span></td><td><b>sentiment_score에서 파생</b> — 라벨↔점수 항상 일치. 호·악재 둘 다 유의미하면 mixed(§6)</td></tr>
       <tr><td class="fname">sentiment_score</td><td>0~1</td><td><span class="src s-code">코드</span></td><td>집계 방향×강도를 0~1로, 호재만 confidence 감쇠(§5·§6)</td></tr>
       <tr><td class="fname">reason</td><td>str (영어)</td><td><span class="src s-llm">LLM</span>(대표)</td><td>대표 기사의 한 줄 근거(수치 포함 권장, §3과 동일 규약)</td></tr>
@@ -376,11 +376,11 @@ weight = certainty(High.9/Med.6/Low.3)
 
   <!-- 13 -->
   <section id="s13">
-    <h2><span class="n">13</span> event_type 온톨로지 (11종, 공시·뉴스 공유)</h2>
+    <h2><span class="n">13</span> event_type 온톨로지 (12종, 공시·뉴스 공유)</h2>
     <p class="lead"><code>app/common/ontology.py</code> 단일 정의. 과세분화 금지(표본 부족). 공시·뉴스가 같은 값을 쓴다.</p>
     <div class="card"><p style="margin:0;font-family:monospace;font-size:13px;color:#7c3aed;line-height:2">
-      earnings · guidance_change · ma · capital_raise · management_change · insider_trade · product_deal · analyst_rating · regulation_legal · delisting_halt · other</p></div>
-    <p style="color:var(--dim);font-size:13px">애매하면 <code>other</code>. 온톨로지 정교화(other 빈발 완화)는 Phase 2 과제.</p>
+      earnings · guidance_change · ma · capital_raise · <b>buyback</b> · management_change · insider_trade · product_deal · analyst_rating · regulation_legal · delisting_halt · other</p></div>
+    <p style="color:var(--dim);font-size:13px"><code>buyback</code>(자사주매입·소각) 2026-07-07 추가 — <code>capital_raise</code>(희석)의 반대·주주환원. alias <code>share_repurchase</code>·<code>repurchase</code>→<code>buyback</code>, 배당은 <code>other</code>. 애매하면 <code>other</code>. 온톨로지 추가정교화(other 빈발 완화)는 Phase 2 과제.</p>
   </section>
 
   <!-- 14 -->

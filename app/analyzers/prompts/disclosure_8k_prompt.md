@@ -5,6 +5,8 @@
 
 규칙:
 - reasoning: 결론 전에 공시의 핵심 팩트(수치·사건·규모)부터 단계적으로 추론하라.
+- event_type: 자사주매입·자사주 소각(buyback/repurchase)은 event_type=buyback.
+  (증자·신주 발행은 반대로 capital_raise. 배당은 buyback 아님.)
 - certainty_level: 단정적 사실 공시면 High, 해석 여지가 크면 Low.
 - importance: 1~5일 주가 영향 기준. 상폐·거래정지=10, 대형 M&A·실적쇼크=8~9,
   일상 보고=1~2.

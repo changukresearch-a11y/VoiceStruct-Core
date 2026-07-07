@@ -221,7 +221,7 @@
     <tr><td><code>ticker</code></td><td><span class="tag v">스크리닝</span></td><td>대문자 티커</td></tr>
     <tr><td><code>trade_date</code> · <code>collected_at</code></td><td><span class="tag code">시스템</span></td><td>매매 기준일 / 수집·레코드 시각(초 포함) — <code>tb_*</code> PK의 시간축</td></tr>
     <tr><td><code>has_signal</code></td><td><span class="tag code">코드</span></td><td>0/1 — LLM 신호 유무</td></tr>
-    <tr><td><code>event_type</code></td><td><span class="tag llm">LLM</span>+<span class="tag code">코드</span></td><td>통일 11종(§9)</td></tr>
+    <tr><td><code>event_type</code></td><td><span class="tag llm">LLM</span>+<span class="tag code">코드</span></td><td>통일 12종(§9)</td></tr>
     <tr><td><code>hard_block</code>·<code>hard_block_reason</code></td><td><span class="tag code">코드</span></td><td>0/1 매수 override(§8) · 사유</td></tr>
     <tr><td><code>reason</code>·<code>summary</code>·<code>keywords</code></td><td><span class="tag llm">LLM</span></td><td>한 줄 근거(<code>sentiment_score</code> 바로 아래 배치) · 전문 3~4줄 · 키워드 5개 (모두 <b>영어</b>)</td></tr>
   </table></div>
@@ -370,8 +370,8 @@ weight = certainty(.9/.6/.3) × (1.0 <span class="kw">if</span> is_confirmed <sp
     <tr><td>5.02 임원 변경</td><td>management_change</td><td>6.5</td><td><span class="perm p3">WATCH_ONLY</span></td><td>—</td></tr>
     <tr><td>8.01 / 기본값</td><td>other</td><td>4.0 / 3.0</td><td><span class="perm p3">WATCH_ONLY</span></td><td>—</td></tr>
   </table></div>
-  <h3>event_type 11종 (공시·뉴스 공유 · <code>ontology.py</code>)</h3>
-  <div class="card"><p style="font-family:var(--mono);font-size:13px;color:var(--violet);margin:0;line-height:1.9">earnings · guidance_change · ma · capital_raise · management_change · insider_trade · product_deal · analyst_rating · regulation_legal · delisting_halt · other</p></div>
+  <h3>event_type 12종 (공시·뉴스 공유 · <code>ontology.py</code>)</h3>
+  <div class="card"><p style="font-family:var(--mono);font-size:13px;color:var(--violet);margin:0;line-height:1.9">earnings · guidance_change · ma · capital_raise · <b>buyback</b> · management_change · insider_trade · product_deal · analyst_rating · regulation_legal · delisting_halt · other</p></div>
 </section>
 
 <!-- 10 -->

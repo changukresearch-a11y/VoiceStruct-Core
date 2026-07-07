@@ -9,12 +9,13 @@ from __future__ import annotations
 
 from typing import Literal
 
-# 통일 event_type (10 + other). 과세분화 금지(표본 부족→백테스트 무의미).
+# 통일 event_type (11 + other). 과세분화 금지(표본 부족→백테스트 무의미).
 EventType = Literal[
     "earnings",            # 실적 발표
     "guidance_change",     # 가이던스 상/하향
     "ma",                  # M&A (인수·합병·피인수)
     "capital_raise",       # 증자·신주·전환사채 (희석)
+    "buyback",             # 자사주매입·자사주 소각 (capital_raise의 반대·주주환원)
     "management_change",   # 임원·이사 변경
     "insider_trade",       # 내부자 거래 (Form 4)
     "product_deal",        # 제품 출시·대형 계약
@@ -30,6 +31,9 @@ EVENT_TYPES: list[str] = list(EventType.__args__)  # 런타임 목록/검증용
 _EVENT_ALIAS = {
     "material_agreement": "product_deal",   # 공시 구 라벨
     "product": "product_deal",              # 뉴스 구 라벨
+    "share_repurchase": "buyback",          # 자사주매입 표기 흔들림 흡수
+    "repurchase": "buyback",
+    # 배당(dividend·special_dividend)은 buyback과 별개 이벤트라 매핑하지 않음(→other 유지).
 }
 
 

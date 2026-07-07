@@ -323,7 +323,7 @@ c *= source_trust <span class="kw">if</span> source_trust <span class="kw">is no
     <tr><td><code>top_evidence</code></td><td><span class="tag sys">번들</span></td><td>대표 기사 <code>출처: 헤드라인</code> 인용(환각 방지·근거 제시).</td></tr>
     <tr><td><code>collected_at</code></td><td><span class="tag sys">시스템</span></td><td>이 스냅샷 생성 시각(UTC 초 포함) — <b>테이블 PK</b>. 새 공시/기사마다 새 행. 신호 신선도·시계열 추적. <span class="dim">(구 <code>created_at</code> 개명.)</span></td></tr>
     <tr><td><code>trade_date</code></td><td><span class="tag sys">시스템</span></td><td>분석 기준일(FK→tb_daily_pick). <span class="dim">(구 <code>as_of</code> 개명.)</span></td></tr>
-    <tr><td><code>event_type</code></td><td><span class="tag llm">LLM</span>→<span class="tag code">정규화</span></td><td>통일 온톨로지 11종으로 <code>norm_event()</code> 정규화(공시·뉴스 공유). 미등록은 <code>other</code>.</td></tr>
+    <tr><td><code>event_type</code></td><td><span class="tag llm">LLM</span>→<span class="tag code">정규화</span></td><td>통일 온톨로지 12종으로 <code>norm_event()</code> 정규화(공시·뉴스 공유). 미등록은 <code>other</code>.</td></tr>
   </table></div>
   <div class="call g"><span class="lb">대표 기사 선정 규칙 <span style="text-transform:none;font-weight:600">(뉴스)</span></span>여러 기사 중 <b><code>importance × 신뢰가중치</code>가 최대</b>인 기사를 대표로 뽑아 그 reason·summary·keywords·원문메타를 싣는다. 시끄럽지만 저신뢰인 루머가 헤드라인이 되지 않도록 — 확정 위주.</div>
 </section>

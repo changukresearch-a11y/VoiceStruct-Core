@@ -114,7 +114,7 @@
     <div class="badges">
       <span class="badge">SEC EDGAR (키 불필요)</span>
       <span class="badge">코드=사실 · LLM=해석</span>
-      <span class="badge">이벤트 온톨로지 11종</span>
+      <span class="badge">이벤트 온톨로지 12종</span>
       <span class="badge">매매권한 6단계</span>
       <span class="badge">출력 DisclosureBundle (0~1)</span>
     </div>
@@ -228,7 +228,7 @@ SEC investigation    → BLOCK_BUY    # SEC 조사</code></pre>
     <pre><code>class DisclosureSignal:
     reasoning: str            # [CoT] 결론 전 단계적 추론 강제
     certainty_level: str      # High / Medium / Low (모호성)
-    event_type: str           # 통일 11종 온톨로지
+    event_type: str           # 통일 12종 온톨로지
     sentiment: str            # positive / negative / neutral / mixed
     importance: int           # 0~10 (거래정지=10, 대형 M&A=8~9, 일상=1~2)
     risk_score: float         # 0~10 하방 위험
@@ -239,7 +239,7 @@ SEC investigation    → BLOCK_BUY    # SEC 조사</code></pre>
     summary: str              # ★ 공시 전문 3~4줄 요약
     keywords: list            # ★ 핵심 키워드 5개</code></pre>
     <div class="callout c-info">💡 <b>요약·키워드 (신규)</b> — 구조화 점수와 별개로, 사람이 바로 읽는 <b>전문 3~4줄 요약</b>·<b>핵심 키워드 5개</b>를 함께 낸다. LLM이 원문 근거로만 채우며(환각 방지), 하류(Strategist·리뷰·대시보드)가 근거를 빠르게 파악하게 한다. (호재/악재 판정 <code>verdict</code>은 <code>sentiment_score</code>+<code>reason</code>의 재진술이라 계약에서 제거됨.)</div>
-    <div class="callout c-info">💡 <b>event_type 온톨로지 11종</b> (공시·뉴스 공유, <code>ontology.py</code> 단일 정의): earnings · guidance_change · ma · capital_raise · management_change · insider_trade · product_deal · analyst_rating · regulation_legal · delisting_halt · other. 과세분화 금지(표본 부족).</div>
+    <div class="callout c-info">💡 <b>event_type 온톨로지 12종</b> (공시·뉴스 공유, <code>ontology.py</code> 단일 정의): earnings · guidance_change · ma · capital_raise · <b>buyback</b> · management_change · insider_trade · product_deal · analyst_rating · regulation_legal · delisting_halt · other. 과세분화 금지(표본 부족). <code>buyback</code>(자사주매입) 2026-07-07 추가.</div>
   </section>
 
   <!-- 9 -->
@@ -266,7 +266,7 @@ SEC investigation    → BLOCK_BUY    # SEC 조사</code></pre>
     ticker; trade_date; collected_at  # ★ trade_date=거래일 · collected_at=수집시각(초, DB append)
     has_signal
     filing_title; filing_no; filed_at  # ★ 공시 제목·번호(accession)·업로드일시(초 포함)
-    event_type                        # 통일 11종
+    event_type                        # 통일 12종
     sentiment; sentiment_score: 0~1   # 방향 라벨 + 점수(0=악재·0.5=중립·1=호재)
     reason                            # ★ 한 줄 근거(수치 포함) — sentiment_score 바로 아래
     importance: 0~1                   # 강도(방향 뺀 별도 축)

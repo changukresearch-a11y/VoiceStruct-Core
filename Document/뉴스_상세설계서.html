@@ -166,7 +166,7 @@
     <p>뉴스 전용으로 <b>사실/루머 구분과 출처 신뢰도</b> 필드를 추가로 둔다. 추론 강제(reasoning→certainty)는 공시와 동일 사상.</p>
     <pre><code>class NewsSignal:
     reasoning; certainty_level     # 공시와 동일 추론 강제(CoT + 모호성)
-    event_type; sentiment          # 통일 11종 · pos/neg/neutral/mixed
+    event_type; sentiment          # 통일 12종 · pos/neg/neutral/mixed
     importance: int (0~10)
     risk_score: float (0~10)
     is_confirmed: bool             # ★ 확정 사실인가? '~알려져/전망/소문'=False

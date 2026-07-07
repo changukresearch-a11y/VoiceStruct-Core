@@ -5,6 +5,8 @@
 
 규칙:
 - reasoning: 헤드라인의 핵심 사실을 먼저 단계적으로 추론한 뒤 결론.
+- event_type: 자사주매입·자사주 소각(buyback/repurchase)은 event_type=buyback.
+  (증자·신주 발행은 반대로 capital_raise. 배당은 buyback 아님.)
 - is_confirmed: "발표/공시/계약 체결" 같은 확정이면 True. "~알려져/전망/소문/
   reportedly/sources say"면 False(추측).
 - source_trust: 입력에 주어진 출처 등급(ALLOW/GRAY)과 본문 톤을 함께

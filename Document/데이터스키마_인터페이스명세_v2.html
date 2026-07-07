@@ -182,9 +182,9 @@
       <p style="margin:4px 0"><code>sentiment_score</code> <span class="range">0~1</span> — <b>0.0</b>=강악재 · <b>0.5</b>=중립 · <b>1.0</b>=강호재</p>
       <p style="margin:4px 0"><span class="badge">positive</span> <span class="badge">negative</span> <span class="badge">neutral</span> <span class="badge">mixed</span> <span style="color:var(--sub);font-size:12.5px">← 점수에서 파생 병기</span></p>
       <p style="color:var(--sub);font-size:12.5px;margin-bottom:0">역할 분리: score=방향 · importance=강도 · label=가독성</p>
-      <h3>2-4. <code>event_type</code> 온톨로지 (11종)</h3>
+      <h3>2-4. <code>event_type</code> 온톨로지 (12종)</h3>
       <p style="font-family:monospace;font-size:12px;color:#c3b0ff;line-height:1.9">
-        earnings · guidance_change · ma · capital_raise · management_change · insider_trade · product_deal · analyst_rating · regulation_legal · delisting_halt · other</p>
+        earnings · guidance_change · ma · capital_raise · buyback · management_change · insider_trade · product_deal · analyst_rating · regulation_legal · delisting_halt · other</p>
       <p style="color:var(--sub);font-size:13px;margin-bottom:0">공시·뉴스 공유(<code>ontology.py</code>). 과세분화 금지.</p>
     </div>
   </div>
@@ -204,7 +204,7 @@
     collected_at: str               <span class="c-str"># ★ 수집시각(초, 스냅샷 PK 일부, 구 created_at)</span>
     has_signal: int                 <span class="c-com"># 0/1 (분석된 공시 신호 유무)</span>
     filing_title; filing_no; filed_at <span class="c-str"># ★ 공시 제목·번호(accession)·업로드일시(초 포함)</span>
-    event_type: str                 <span class="c-com"># 통일 11종</span>
+    event_type: str                 <span class="c-com"># 통일 12종</span>
     sentiment: str                  <span class="c-com"># 방향 라벨(파생)</span>
     sentiment_score: float          <span class="c-str"># 0~1: 0=악재·0.5=중립·1=호재</span>
     reason: str                     <span class="c-com"># 한 줄 근거 (sentiment_score 바로 아래로 재배치)</span>

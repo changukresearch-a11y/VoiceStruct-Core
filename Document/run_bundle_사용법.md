@@ -149,6 +149,6 @@ python run_bundle.py --ticker TSLA
 
 - 어댑터/계약: `app/common/analysis_bundle.py` (번들 스키마·빌더)
 - 스냅샷 저장/읽기: `app/storage/db.py` (`tb_disclosure`/`tb_news` · `save_*_bundle`/`latest_*`)
-- 공유 event_type: `app/common/ontology.py` (통일 11종)
+- 공유 event_type: `app/common/ontology.py` (통일 12종)
 - 명세·근거: `데이터스키마_인터페이스명세_v2.md` · `결과값_필드_레퍼런스.html`
 - 상세 작업노트: `WORKLOG.md`
