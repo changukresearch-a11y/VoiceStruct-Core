@@ -104,7 +104,7 @@
       <div class="grp">판단 근거·경계</div>
       <a href="#s5">05 · sentiment_score</a>
       <a href="#s6">06 · confidence·importance</a>
-      <a href="#s7">07 · 출처 3등급 + grade_score</a>
+      <a href="#s7">07 · 출처 3등급 + 선정기준</a>
       <a href="#s8">08 · 키워드 사전필터</a>
       <a href="#s9">09 · fact_check 규칙</a>
       <a href="#s10">10 · hard_block·권한 6단계</a>
@@ -286,6 +286,20 @@ weight = certainty(High.9/Med.6/Low.3)
       <tr><td><span class="perm g2">GRAY</span></td><td><b>0.6</b></td><td>단독 매수 금지, 교차확인 시 감점</td><td>benzinga · seekingalpha · fool · investorplace · zacks · thestreet · tipranks &nbsp;<i>(+ 소셜·미등록 도메인 전부)</i></td></tr>
       <tr><td><span class="perm g4">BLOCK</span></td><td><b>0.0</b></td><td>분석 제외(즉시 drop)</td><td>sponsored/paid promotion · guaranteed profit · 원출처 없음</td></tr>
     </table>
+
+    <h3>7-1. 선정 기준 — "왜 이 등급인가"</h3>
+    <p class="lead">외부 신뢰도 지수(NewsGuard·Media Bias/Fact Check 등)를 그대로 가져온 것이 <b>아니라</b>, 매체의 <b>역할·유형</b>과 <b>편집·정정 책임 구조</b>를 기준으로 큐레이션했다. 관통 원칙은 <b>"원본(1차 출처)에 얼마나 가까운가 + 정정·편집 책임이 있는가"</b>.</p>
+    <table>
+      <tr><th>등급</th><th>부류</th><th>대표 도메인</th><th>선정 근거</th></tr>
+      <tr><td rowspan="3"><span class="perm g1">ALLOW</span></td><td>① 1차 공식 출처</td><td>sec.gov · nasdaq · nyse · finra · fda</td><td>발표 주체·규제기관·거래소 = <b>사실상 원본</b>. 진위 논란 없음</td></tr>
+      <tr><td>② 1급 금융 언론</td><td>reuters · bloomberg · wsj · apnews · cnbc · ft · barrons · marketwatch</td><td>국제적으로 인정된 통신사·경제지. <b>편집·팩트체킹·정정보도 책임 구조</b> 보유</td></tr>
+      <tr><td>③ 공식 보도자료 배포사</td><td>businesswire · prnewswire · globenewswire</td><td>기업이 낸 <b>원문 그대로 배포</b>(1차 근접)</td></tr>
+      <tr><td><span class="perm g2">GRAY</span></td><td>2차 매체 / 논평·집계</td><td>benzinga · seekingalpha · fool · investorplace · zacks · thestreet · tipranks <i>(+ 소셜·미등록 전부)</i></td><td>자체 취재보다 <b>논평·추천·데이터 집계 중심</b> → 단독 신뢰 부적합("교차확인 시 감점")</td></tr>
+      <tr><td><span class="perm g4">BLOCK</span></td><td>내용 조건</td><td>sponsored · paid promotion · guaranteed profit · 원출처 없음</td><td>편집 책임 없는 <b>유료 홍보·수익보장</b>성 → 분석 제외</td></tr>
+    </table>
+    <div class="callout c-warn"><b>⚠️ 근거의 성격(정직한 한계)</b> — 위 분류는 <b>업계 통념 기반의 우리 큐레이션 판단</b>이지, 외부 감사 가능한 표준에 앵커링된 것은 아니다. 경계가 다퉈질 경우("왜 seekingalpha는 GRAY인데 marketwatch는 ALLOW냐") 근거가 "일반적 평판"이라 방어가 약할 수 있다. <b>후속 과제</b>: NewsGuard·MBFC 등 외부 지수로 앵커링하면 감사 가능해진다.</div>
+    <div class="callout c-tip">🛡️ <b>단, 단일 관문이 아니다(다층 방어)</b> — <code>grade_score</code>(도메인 등급)는 여러 겹의 하나일 뿐. 위에 <b>키워드 사전필터(§8) + LLM <code>is_confirmed</code> + LLM <code>source_trust</code> + 교차확인</b>이 겹친다. 그래서 등급 경계가 다소 논쟁적이어도 오분류 하나가 매매를 결정하지 않는다.</div>
+
     <div class="callout c-warn"><b>⚠️ ALLOW ≠ 매수허용</b> — ALLOW는 "분석에 반영 가능"일 뿐. 실제 매수는 시장반응·리스크 필터를 <b>추가로</b> 통과해야 한다(우리 범위 밖, Strategist·게이트). <code>grade_score</code>는 정책 등급(코드) / <code>source_trust</code>는 LLM 판단 — <b>두 축을 분리</b>해 노출한다.</div>
     <div class="callout c-info"><b>💡 소셜(x·reddit·stocktwits)은 이제 GRAY</b> — 전용 WATCH_ONLY 등급을 없앴다. 소셜/미등록 도메인은 모두 GRAY(단독 매수 금지)로 처리되고, 루머성 문구는 키워드 사전필터(§8)·LLM <code>is_confirmed</code>가 별도로 거른다.</div>
   </section>

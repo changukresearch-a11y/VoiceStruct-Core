@@ -2,14 +2,29 @@
 # 핵심: ALLOW ≠ 매수허용. ALLOW는 '분석 반영 가능'일 뿐,
 # 최종 매수는 시장반응·리스크 필터를 추가로 통과해야 한다.
 # 미등록 도메인(소셜 x/reddit/stocktwits 등 포함)은 코드에서 보수적 기본 GRAY로 분류.
+#
+# ── 선정 기준 (등급 근거) ──────────────────────────────────────────
+# 외부 신뢰도 지수(NewsGuard·MBFC 등)를 그대로 쓴 게 아니라, 매체의 역할·유형과
+# 편집·정정 책임 구조로 큐레이션. 관통 원칙 = "원본(1차 출처) 근접성 + 편집 책임".
+#   ALLOW = ① 1차 공식출처(규제기관·거래소: sec/nasdaq/nyse/finra/fda)
+#         + ② 1급 금융언론(편집·팩트체킹·정정보도 책임: reuters/bloomberg/wsj/ap/cnbc/ft/barrons/marketwatch)
+#         + ③ 공식 보도자료 배포사(기업 원문 그대로: businesswire/prnewswire/globenewswire)
+#   GRAY  = 2차 매체·논평·집계 중심(단독 신뢰 부적합) + 소셜/미등록 전부
+#   BLOCK = 유료홍보·수익보장·원출처 없음(편집 책임 없음)
+# ※ 한계: 업계 통념 기반 큐레이션이라 외부 감사표준엔 미앵커링(후속 과제).
+#   단 grade_score는 단일 관문 아님 — 키워드필터+is_confirmed+source_trust+교차확인 다층 방어.
+# 상세: Document/결과값_필드_레퍼런스.html §7-1
+# ────────────────────────────────────────────────────────────────
 
 source_policy:
   ALLOW:        # 공식·1급 매체 — 점수 반영 가능
+    # ① 1차 공식 출처 (규제기관·거래소 = 사실상 원본)
     - sec.gov
     - nasdaq.com
     - nyse.com
     - finra.org
     - fda.gov
+    # ② 1급 금융 언론 (편집·정정보도 책임 구조)
     - reuters.com
     - bloomberg.com
     - wsj.com
@@ -18,11 +33,12 @@ source_policy:
     - marketwatch.com
     - barrons.com
     - ft.com
+    # ③ 공식 보도자료 배포사 (기업 원문 그대로 배포)
     - businesswire.com
     - prnewswire.com
     - globenewswire.com
 
-  GRAY:         # 2급 — 단독 매수 금지, 교차확인 시 감점 반영
+  GRAY:         # 2급 — 자체취재보다 논평·추천·집계 중심 → 단독 매수 금지, 교차확인 시 감점
     - benzinga.com
     - seekingalpha.com
     - fool.com
