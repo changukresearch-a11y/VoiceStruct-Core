@@ -255,7 +255,7 @@
     sentiment_score: float          <span class="c-str"># 0~1: 0=악재·0.5=중립·1=호재</span>
     reason: str                     <span class="c-com"># 한 줄 근거 (sentiment_score 바로 아래로 재배치)</span>
     importance: float               <span class="c-good"># 0~1 (강도, 신뢰가중)</span>
-    peak_importance: float          <span class="c-good"># 0~1 (집계 전 최고 잠재)</span>
+    peak_importance: float          <span class="c-good"># 0~1 (신뢰검증 기사 중 최댓값)</span>
     risk_score: float               <span class="c-good"># 0~1</span>
     confidence: float               <span class="c-good"># 0~1</span>
     source_trust: float             <span class="c-good"># 0~1 (LLM 판단)</span>
@@ -276,7 +276,7 @@
     <tr><td><code>news_title</code>·<code>source</code>·<code>published_at</code></td><td class="range">str</td><td><b>대표 기사</b>의 제목·출처 언론사·업로드 일시(<b>초 포함</b>)</td></tr>
     <tr><td><code>sentiment_score</code>·<code>reason</code></td><td class="range">0~1·str</td><td>방향 점수(0=악재·0.5=중립·1=호재)와 한 줄 근거. <code>reason</code>은 <code>sentiment_score</code> 바로 아래로 재배치</td></tr>
     <tr><td><code>importance</code></td><td class="range">0~1</td><td>신뢰가중 평균 강도</td></tr>
-    <tr><td><code>peak_importance</code></td><td class="range">0~1</td><td>집계 전 최고 잠재. "잠재 큰데 저신뢰라 눌린" 경우 병기</td></tr>
+    <tr><td><code>peak_importance</code></td><td class="range">0~1</td><td><b>신뢰검증 기사(확정·trust≥0.6·ALLOW) 중 최댓값</b>. 저신뢰 과장이 가짜 peak를 못 세우게(2026-07-07). 신뢰기사 없으면 importance로 수렴</td></tr>
     <tr><td><code>source_trust</code></td><td class="range">0~1</td><td>(뉴스 전용) 출처 신뢰도(LLM). 소셜·루머 방어</td></tr>
     <tr><td><code>grade_score</code></td><td class="range">0~1</td><td>출처 <b>정책등급</b> 점수. ALLOW1·GRAY.6·BLOCK0 (신뢰가중, 소셜=GRAY)</td></tr>
     <tr><td><code>confirmed_score</code></td><td class="range">0~1</td><td>확정 비율 = 확정건수 / 전체. 뉴스는 값이 가변이라 <b>유지</b></td></tr>

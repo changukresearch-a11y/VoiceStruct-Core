@@ -277,7 +277,7 @@ weight = certainty(.9/.6/.3) × (1.0 <span class="kw">if</span> is_confirmed <sp
   <div class="tbl"><table>
     <tr><th>결과 필드</th><th>산출식 · 근거</th></tr>
     <tr><td><code>importance</code></td><td><b>부호 없는 강도의 신뢰가중 평균</b> — <b>방향과 독립</b>. 호·악재 섞여도 상쇄되지 않아 같은 강도면 항상 같은 값. (전부 저신뢰=가중치 0이면 등가중 폴백으로 붕괴 방지)</td></tr>
-    <tr><td><code>peak_importance</code></td><td>집계 전 최고 강도 <code>max(_n10(importance))</code></td></tr>
+    <tr><td><code>peak_importance</code></td><td>신뢰검증 기사(확정·trust≥0.6·ALLOW) 중 최고 강도 <code>max([importance]+cred_mags)</code>. 저신뢰 과장 제외(2026-07-07)</td></tr>
     <tr><td><code>agg_signed</code>(방향)</td><td>기사별 <code>강도×부호</code>의 신뢰가중 평균. 단 <b>강한 악재(min ≤ −0.7) 1건이라도 있으면 그 값 채택</b>(보수)</td></tr>
     <tr><td><code>sentiment_score</code></td><td><code>_senti_score(agg_signed, confidence)</code></td></tr>
     <tr><td><code>sentiment</code>(라벨)</td><td><b>sentiment_score에서 파생</b>(라벨↔점수 항상 일치): 강한악재→negative · 호·악재 각 신뢰가중 ≥30%→<b>mixed</b> · 그외 &gt;.5=positive/&lt;.5=negative/=.5=neutral</td></tr>

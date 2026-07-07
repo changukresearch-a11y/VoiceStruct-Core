@@ -239,6 +239,20 @@ def _news_conf(sig: Any) -> float:
     return max(0.0, min(1.0, c))
 
 
+def _news_credible(r: Any) -> bool:
+    """peak_importance 산정 자격 — 신뢰검증된 기사인가.
+    확정 사실 or source_trust≥0.6 or 출처 정책등급 ALLOW 중 하나면 True.
+    (저신뢰 매체가 자극적으로 부풀린 importance가 가짜 peak를 세우는 것 방지)
+    """
+    sig = getattr(r, "signal", None)
+    if sig is None:
+        return False
+    st = getattr(sig, "source_trust", None) or 0.0
+    return (bool(getattr(sig, "is_confirmed", False))
+            or st >= 0.6
+            or getattr(r, "source_grade", None) == "ALLOW")
+
+
 def build_news_bundle(ticker: str, trade_date: str,
                       news_results: list | None = None) -> NewsBundle:
     b = NewsBundle(ticker=ticker.upper(), trade_date=trade_date)
@@ -276,7 +290,13 @@ def build_news_bundle(ticker: str, trade_date: str,
     # 강도(importance): 방향과 무관한 신뢰가중 평균 — 호·악재가 섞여도 상쇄되지 않아
     # 같은 강도면 방향 구성과 무관하게 항상 같은 값이 나온다(일관성).
     b.importance = round(sum(m * w for m, w in zip(mags, weights)) / tw, 2)
-    b.peak_importance = max(mags)   # mags는 이미 0~1(_n10 적용됨) — 재정규화 금지
+    # peak_importance: '가장 센 기사 1건'이되 **신뢰검증된 기사 중에서만** 산정한다
+    # (_news_credible: 확정 or source_trust≥0.6 or ALLOW). 저신뢰 매체의 자극적
+    # 과장이 가짜 peak를 세우는 편향을 차단(2026-07-07). 신뢰 기사 최댓값이 평균보다
+    # 클 때만 부각 — 신뢰 기사가 없으면 importance로 수렴(peak≥importance 불변식 유지,
+    # low-conf 딱지도 신뢰 기반으로만 발화).
+    cred_mags = [m for m, r in zip(mags, analyzed) if _news_credible(r)]
+    b.peak_importance = round(max([b.importance] + cred_mags), 2)
 
     # 방향(sentiment): 강도와 별도 집계. 강한 악재(≤ −0.7) 1건이면 보수적으로 그쪽.
     strong_neg = min(signed) <= -0.7
