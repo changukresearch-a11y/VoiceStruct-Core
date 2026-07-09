@@ -68,7 +68,11 @@ def main() -> None:
     ap.add_argument("--news", action="store_true", help="뉴스도 통합 처리")
     ap.add_argument("--news-limit", type=int, default=6)
     ap.add_argument("--llm", action="store_true")
-    ap.add_argument("--save", action="store_true")
+    ap.add_argument("--save", action="store_true",
+                    help="per-signal 로그 저장(disclosure_signals/news_signals)")
+    ap.add_argument("--bundles", action="store_true",
+                    help="종목당 집계 번들을 tb_disclosure/tb_news에 append "
+                         "(매 사이클 종목마다 1행, 신호 없으면 has_signal=0)")
     args = ap.parse_args()
 
     forms = tuple(x.strip() for x in args.forms.split(",") if x.strip())
@@ -78,17 +82,23 @@ def main() -> None:
         print("⚠️  LLM 키 없음 → LLM 건너뜀")
 
     kwargs = dict(limit=args.limit, forms=forms, run_news=args.news,
-                  news_limit=args.news_limit, run_llm=run_llm, save=args.save)
+                  news_limit=args.news_limit, run_llm=run_llm, save=args.save,
+                  save_bundles=args.bundles)
 
     if args.once:
         print(f"▶️  1회 순회: limit={args.limit} forms={forms} "
-              f"news={args.news} llm={run_llm} save={args.save}\n")
+              f"news={args.news} llm={run_llm} save={args.save} "
+              f"bundles={args.bundles}\n")
         report = run_cycle(**kwargs)
         _render_cycle(report)
+        if args.bundles:
+            print(f"💾 tb_disclosure/tb_news 스냅샷 append "
+                  f"(종목당 집계 1행 · has_signal 0/1)")
     else:
         print(f"▶️  주기 실행: 공시 매 {args.disclosure_interval}s · "
               f"뉴스 매 {args.news_interval}s · limit={args.limit} "
-              f"forms={forms} news={args.news} llm={run_llm} save={args.save}\n"
+              f"forms={forms} news={args.news} llm={run_llm} save={args.save} "
+              f"bundles={args.bundles}\n"
               f"   (Ctrl+C로 종료)\n")
         run_forever(disclosure_interval_sec=args.disclosure_interval,
                     news_interval_sec=args.news_interval, **kwargs)

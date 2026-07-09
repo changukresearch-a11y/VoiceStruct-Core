@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantinue 컬럼값 산출·근거 — 데이터 계보 (Lineage)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f8fafc; --panel:#ffffff; --line:#e2e8f0; --line2:#f1f5f9;
+    --txt:#334155; --head:#0f172a; --dim:#64748b;
+    --green:#15803d; --green-d:#14532d; --green-bg:#f0fdf4;
+    --blue:#1d4ed8; --blue-d:#1e3a8a; --blue-bg:#eff6ff;
+    --amber:#b45309; --amber-d:#92400e; --amber-bg:#fffbeb;
+    --rose:#be123c; --rose-bg:#fff1f2;
+    --violet:#7c3aed; --violet-bg:#f5f3ff; --slate:#475569; --slate-bg:#f1f5f9;
+    --teal:#0f766e; --teal-bg:#ccfbf1;
+    --sidebar:300px;
+  }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0; font-family:"Noto Sans KR",system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--txt); line-height:1.75; letter-spacing:-.01em; font-size:15px; word-break:keep-all; overflow-wrap:break-word;}
+  a{color:var(--green); text-decoration:none} a:hover{text-decoration:underline}
+  .layout{display:flex; align-items:flex-start}
+  aside.sidebar{width:var(--sidebar); flex:0 0 var(--sidebar); position:sticky; top:0; height:100vh; overflow-y:auto; background:#fff; border-right:1px solid var(--line); padding:24px 16px;}
+  .sidebar .brand{display:flex; align-items:center; gap:10px; margin-bottom:4px}
+  .sidebar .brand .e{font-size:26px} .sidebar .brand b{font-size:17px; color:var(--head)}
+  .sidebar .sub{color:var(--dim); font-size:12px; margin:0 0 18px; line-height:1.5}
+  .sidebar nav a{display:block; color:var(--dim); font-size:13px; padding:6px 11px; border-radius:8px; margin:1px 0; border-left:2px solid transparent; transition:.12s;}
+  .sidebar nav a:hover{background:var(--green-bg); color:var(--green-d)}
+  .sidebar nav a.active{background:var(--green-bg); color:var(--green-d); border-left-color:var(--green); font-weight:700}
+  .sidebar nav .grp{font-size:11px; font-weight:800; color:var(--slate); text-transform:uppercase; letter-spacing:.1em; margin:14px 11px 4px}
+  .sidebar .foot{margin-top:20px; padding-top:14px; border-top:1px solid var(--line); color:var(--dim); font-size:11px; line-height:1.6}
+  main.content{flex:1 1 auto; min-width:0; max-width:1180px; margin:0 auto; padding:0 48px 120px}
+  .hero{padding:50px 10px 36px; border-bottom:1px solid var(--line); background:radial-gradient(ellipse 58% 50% at 78% -12%,rgba(13,148,136,.12),transparent),radial-gradient(ellipse 50% 44% at 10% 2%,rgba(8,145,178,.08),transparent)}
+  .hero h1{font-size:clamp(30px,5.4vw,44px); margin:18px 0 8px; font-weight:800; color:var(--head); letter-spacing:-.03em; line-height:1.2}
+  .hero h1 .grad{background:linear-gradient(100deg,#15803d,#0d9488 55%,#0891b2); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .hero .accent-bar{width:60px; height:4px; border-radius:4px; background:linear-gradient(90deg,#15803d,#0891b2); margin:2px 0 0}
+  .hero .tag{color:var(--dim); font-size:16px; margin:16px 0 0; max-width:820px; line-height:1.7}
+  .hero .tag b{color:var(--head)}
+  .hero .meta{margin-top:26px; display:flex; gap:11px 28px; flex-wrap:wrap; font-size:13.5px; color:var(--dim)}
+  .hero .meta b{color:var(--head); font-weight:700}
+  .badges{display:flex; gap:8px; flex-wrap:wrap}
+  .badge{background:var(--slate-bg); border:1px solid var(--line); padding:5px 12px; border-radius:999px; font-size:12.5px; color:var(--dim); font-weight:600}
+  section{scroll-margin-top:18px}
+  h2{font-size:23px; margin:58px 0 6px; font-weight:800; display:flex; align-items:center; gap:11px; color:var(--head)}
+  h2 .n{font-size:13px; color:#fff; background:var(--green); border-radius:8px; padding:3px 10px; font-weight:800; flex:none}
+  h2 .n.disc{background:var(--blue)} h2 .n.news{background:var(--teal)} h2 .n.core{background:var(--slate)}
+  h3{font-size:16px; margin:26px 0 6px; color:var(--head); font-weight:700; padding-left:2px; border-left:3px solid var(--green); padding-left:10px}
+  .lead{color:var(--dim); font-size:15px; margin:4px 0 0}
+  p{margin:10px 0} ul,ol{margin:10px 0; padding-left:22px} li{margin:5px 0}
+  strong,b{color:var(--head)}
+  code{background:#f1f5f9; border:1px solid var(--line); padding:1px 6px; border-radius:5px; font-size:.88em; color:#9a3412; font-family:"SF Mono",Menlo,Consolas,monospace}
+  .callout{border-radius:12px; padding:13px 16px; margin:14px 0; border:1px solid; font-size:14.5px}
+  .c-tip{background:var(--green-bg); border-color:#bbf7d0}
+  .c-warn{background:var(--amber-bg); border-color:#fde68a}
+  .c-info{background:var(--blue-bg); border-color:#bfdbfe}
+  .c-danger{background:var(--rose-bg); border-color:#fecdd3}
+  .callout b{color:var(--head)}
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:13px; border:1px solid var(--line); border-radius:12px; overflow:hidden}
+  th,td{padding:9px 11px; text-align:left; border-bottom:1px solid var(--line2); vertical-align:top}
+  th{background:#f1f5f9; color:var(--head); font-weight:700}
+  tr:last-child td{border-bottom:none} tbody tr:nth-child(even){background:#fcfdfe}
+  .flow{background:#0f172a; border-radius:10px; padding:13px 15px; margin:10px 0; overflow-x:auto; color:#e2e8f0; font-size:12.4px; line-height:1.65; font-family:"SF Mono",Menlo,Consolas,monospace; white-space:pre}
+  .flow .cm{color:#64748b} .flow .kw{color:#7dd3fc} .flow .st{color:#86efac}
+  hr{border:none; border-top:1px solid var(--line); margin:36px 0}
+  .owner{display:inline-block; padding:1px 9px; border-radius:999px; font-size:11.5px; font-weight:700; background:var(--green-bg); color:var(--green-d); border:1px solid #bbf7d0}
+  /* ── 계보(lineage) 컴포넌트 ── */
+  .lin{background:#fff; border:1px solid var(--line); border-radius:13px; margin:14px 0; overflow:hidden; box-shadow:0 1px 2px rgba(15,23,42,.03)}
+  .lin-h{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:11px 16px; background:#f8fafc; border-bottom:1px solid var(--line)}
+  .lin-col{font-family:"SF Mono",Menlo,Consolas,monospace; font-weight:800; color:#9a3412; font-size:15px}
+  .lin-ty{font-size:11px; color:var(--dim); border:1px solid var(--line); border-radius:5px; padding:1px 7px; background:#fff}
+  .lin-no{font-size:11px; font-weight:800; color:var(--dim); background:#fff; border:1px solid var(--line); border-radius:999px; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center}
+  .src{margin-left:auto; font-size:10.5px; font-weight:800; padding:2px 9px; border-radius:6px; letter-spacing:.03em}
+  .s-sec{background:var(--blue-bg); color:var(--blue-d); border:1px solid #bfdbfe}
+  .s-rss{background:var(--teal-bg); color:var(--teal); border:1px solid #99f6e4}
+  .s-llm{background:var(--amber-bg); color:var(--amber-d); border:1px solid #fde68a}
+  .s-code{background:var(--slate-bg); color:var(--slate); border:1px solid var(--line)}
+  .s-sys{background:var(--green-bg); color:var(--green-d); border:1px solid #bbf7d0}
+  .lin-b{padding:4px 16px 8px}
+  .lf{display:flex; gap:13px; padding:8px 0; border-bottom:1px dashed var(--line2)}
+  .lf:last-child{border-bottom:none}
+  .lf-n{flex:0 0 52px; font-size:10.5px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:.03em; height:20px; display:inline-flex; align-items:center; justify-content:center; border-radius:5px; margin-top:2px}
+  .lf-n.n1{background:var(--slate)} .lf-n.n2{background:var(--blue)} .lf-n.n3{background:var(--green)}
+  .lf-b{flex:1; font-size:13.5px; min-width:0}
+  .lf-b code{font-size:.86em}
+  .lin-ex{margin:0; padding:9px 16px; background:#fffdf0; border-top:1px solid var(--line); font-size:12.5px; color:var(--slate)}
+  .lin-ex b{color:var(--amber-d)}
+  .menu-btn{display:none}
+  @media(max-width:880px){
+    aside.sidebar{position:fixed; left:0; top:0; z-index:50; height:100vh; width:265px; transform:translateX(-100%); transition:transform .25s; box-shadow:0 0 40px rgba(15,23,42,.18);}
+    body.nav-open aside.sidebar{transform:translateX(0)}
+    main.content{padding:0 18px 100px}
+    .menu-btn{display:flex; align-items:center; gap:8px; position:fixed; top:14px; left:14px; z-index:40; background:var(--panel); border:1px solid var(--line); color:var(--head); border-radius:10px; padding:9px 14px; font-size:14px; cursor:pointer; box-shadow:0 2px 8px rgba(15,23,42,.08);}
+    .scrim{display:none; position:fixed; inset:0; background:rgba(15,23,42,.35); z-index:45}
+    body.nav-open .scrim{display:block}
+    .hero{padding-top:58px} .lf-n{flex-basis:44px}
+  }
+</style>
+</head>
+<body>
+<button class="menu-btn" onclick="document.body.classList.toggle('nav-open')">☰ 목차</button>
+<div class="scrim" onclick="document.body.classList.remove('nav-open')"></div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand"><span class="e">🧬</span><b>Quantinue</b></div>
+    <p class="sub">컬럼값 산출·근거 데이터 계보<br>원천 → 처리 → 결정 (컬럼별 추적)</p>
+    <nav id="toc">
+      <a href="#legend">범례 · 원천 5종</a>
+      <a href="#helpers">공통 산출 헬퍼</a>
+      <div class="grp">📄 tb_disclosure (18)</div>
+      <a href="#d-meta">A. 종목·원문 메타 (1~7)</a>
+      <a href="#d-signal">B. 신호 점수 (8~14)</a>
+      <a href="#d-safe">C. 안전·요약 (15~18)</a>
+      <div class="grp">📰 tb_news (25)</div>
+      <a href="#n-meta">A. 메타 (1~4)</a>
+      <a href="#n-rep">B. 대표 기사 복사 (5~13)</a>
+      <a href="#n-agg">C. 신뢰가중 집계 (14~22)</a>
+      <a href="#n-hard">D. 하드 스캔 (23~24)</a>
+      <a href="#n-ev">E. 근거 정렬 (25)</a>
+      <div class="grp">참고</div>
+      <a href="#weight">신뢰가중치 weight 심화</a>
+    </nav>
+    <div class="foot">🧬 코드 현행 <b>analysis_bundle.py · bundle_snapshot.py</b> 1:1 (2026-07-09)<br>담당 정창욱 · 팀 여름이었다</div>
+  </aside>
+
+  <main class="content">
+  <div class="hero">
+    <div class="badges">
+      <span class="badge" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;font-weight:700">🧬 데이터 계보</span>
+      <span class="badge">컬럼별 원천→처리→결정</span>
+      <span class="badge">tb_disclosure 18 · tb_news 25</span>
+      <span class="badge">코드 1:1 · 2026-07-09</span>
+    </div>
+    <h1>컬럼값 <span class="grad">산출·근거 데이터 계보</span></h1>
+    <div class="accent-bar"></div>
+    <p class="tag">tb_disclosure(18)·tb_news(25)의 <b>모든 컬럼</b>에 대해 — <b>① 값을 어디서 가져오고(원천)</b> · <b>② 어떤 수식·매핑으로 처리하며(처리)</b> · <b>③ 어떤 규칙으로 최종값이 결정되나(결정)</b>를 실제 코드(<code>analysis_bundle.py</code>·<code>bundle_snapshot.py</code>) 그대로 추적한 데이터 계보(lineage) 문서.</p>
+    <div class="meta">
+      <span>담당 <b>정창욱</b></span>
+      <span>기준 <b>build_disclosure_bundle · build_news_bundle</b></span>
+      <span>집계 <b>스케줄러 _save_ticker_bundles</b></span>
+    </div>
+  </div>
+
+  <!-- ══════════ 범례 ══════════ -->
+  <section id="legend">
+    <h2><span class="n core">§</span> 범례 — 원천(Source) 5종</h2>
+    <p class="lead">각 컬럼 카드 우상단 칩이 그 값의 <b>1차 원천</b>이다. 대부분은 <span class="src s-llm" style="margin:0">LLM</span> 또는 <span class="src s-sec" style="margin:0">SEC/RSS</span> 원시값을 <span class="src s-code" style="margin:0">CODE</span>가 정규화·집계해 결정한다.</p>
+    <table>
+      <thead><tr><th>칩</th><th>원천</th><th>의미</th></tr></thead>
+      <tbody>
+        <tr><td><span class="src s-sec" style="margin:0">SEC</span></td><td>SEC EDGAR API</td><td>submissions·문서·companyconcept·Form4 XML에서 온 확정 사실(accession·filed_at·제목 등)</td></tr>
+        <tr><td><span class="src s-rss" style="margin:0">RSS</span></td><td>Google News RSS</td><td>기사 제목·언론사·발행시각·링크</td></tr>
+        <tr><td><span class="src s-llm" style="margin:0">LLM</span></td><td>분석 LLM 출력</td><td><code>DisclosureSignal</code>/<code>NewsSignal</code>의 sentiment·importance·risk_score·reason 등 해석값(0~10)</td></tr>
+        <tr><td><span class="src s-code" style="margin:0">CODE</span></td><td>코드 계산·집계</td><td>정규화(_n10)·신뢰가중 평균·매핑·매칭 등 결정 로직</td></tr>
+        <tr><td><span class="src s-sys" style="margin:0">SYS</span></td><td>시스템 생성</td><td>수집 시각(_now)·입력 ticker·trade_date 등</td></tr>
+      </tbody>
+    </table>
+    <div class="callout c-info">📖 카드 내부 3단계 — <span class="lf-n n1" style="display:inline-flex">원천</span> 원시값을 어디서 · <span class="lf-n n2" style="display:inline-flex">처리</span> 어떤 수식/매핑으로 · <span class="lf-n n3" style="display:inline-flex">결정</span> 최종값 규칙.</div>
+  </section>
+
+  <!-- ══════════ 공통 헬퍼 ══════════ -->
+  <section id="helpers">
+    <h2><span class="n core">§</span> 공통 산출 헬퍼 — 모든 컬럼이 참조</h2>
+    <p class="lead">컬럼 계보에서 반복 인용되는 정규화·가중 함수. 한 곳에 정의하고 각 컬럼에서 이름으로 참조한다.</p>
+
+    <h3>_n10 — 0~10 척도를 0~1로</h3>
+    <div class="flow"><span class="kw">def</span> _n10(v):  <span class="cm"># LLM은 0~10, DB는 0~1로 통일</span>
+    <span class="kw">return</span> round(max(0.0, min(10.0, float(v <span class="kw">or</span> 0))) / 10.0, <span class="st">2</span>)
+<span class="cm"># importance 7 → 0.7 · risk_score 3 → 0.3 · None → 0.0</span></div>
+
+    <h3>_CERTAINTY — LLM 확신도 라벨을 confidence(0~1)로</h3>
+    <div class="flow">_CERTAINTY = {<span class="st">"High"</span>: 0.9, <span class="st">"Medium"</span>: 0.6, <span class="st">"Low"</span>: 0.3}   <span class="cm"># 미지정 기본 0.5</span></div>
+
+    <h3>_sign — 방향 라벨을 부호로</h3>
+    <div class="flow">_sign(sentiment) = {<span class="st">"positive"</span>: +1, <span class="st">"negative"</span>: −1}.get(sentiment, 0)  <span class="cm"># neutral·mixed = 0</span></div>
+
+    <h3>_senti_score — 방향×강도를 0~1로 (호재만 신뢰 감쇠)</h3>
+    <div class="flow"><span class="kw">def</span> _senti_score(signed, confidence=1.0):
+    signed = clip(signed, −1, +1)
+    <span class="kw">if</span> signed &gt; 0:              <span class="cm"># 호재(+)만 confidence로 중립(0.5)쪽 감쇠</span>
+        signed *= clip(confidence, 0, 1)   <span class="cm"># 근거 약한 낙관 과신·펌프 방지</span>
+    <span class="cm"># 악재(−)는 감쇠 안 함 — 안전 우선, 경고 신호 안 흐림('가장 보수적 채택')</span>
+    <span class="kw">return</span> round(0.5 + 0.5 * signed, <span class="st">2</span>)   <span class="cm"># 0=강악재·0.5=중립·1=강호재</span></div>
+
+    <h3>_news_conf — 기사별 신뢰가중치 weight (뉴스)</h3>
+    <div class="flow"><span class="kw">def</span> _news_conf(sig):
+    c = _CERTAINTY.get(sig.certainty_level, 0.5)   <span class="cm"># 확신도</span>
+    c *= 1.0 <span class="kw">if</span> sig.is_confirmed <span class="kw">else</span> 0.5   <span class="cm"># 확정=1.0 / 추측=0.5</span>
+    c *= sig.source_trust <span class="kw">if</span> source_trust <span class="kw">is not</span> None <span class="kw">else</span> 1.0  <span class="cm"># 0.0을 1.0로 오인 금지</span>
+    <span class="kw">return</span> clip(c, 0, 1)</div>
+
+    <h3>_news_credible — peak_importance 산정 자격</h3>
+    <div class="flow"><span class="kw">def</span> _news_credible(r):   <span class="cm"># 신뢰검증된 기사인가</span>
+    <span class="kw">return</span> r.signal.is_confirmed <span class="kw">or</span> r.signal.source_trust ≥ 0.6 <span class="kw">or</span> r.source_grade == <span class="st">"ALLOW"</span></div>
+
+    <h3>_GRADE_SCORE — 출처 정책등급을 점수로 (코드·도메인·사전)</h3>
+    <div class="flow">_GRADE_SCORE = {<span class="st">"ALLOW"</span>: 1.0, <span class="st">"GRAY"</span>: 0.6, <span class="st">"BLOCK"</span>: 0.0}   <span class="cm"># 미등급 기본 0.6(GRAY)</span></div>
+
+    <h3>weight · tw — 뉴스 집계 가중치</h3>
+    <div class="flow">raw_weights = [_news_conf(r.signal) <span class="kw">for</span> r <span class="kw">in</span> analyzed]
+weights = raw_weights <span class="kw">if</span> sum(raw_weights) &gt; 0 <span class="kw">else</span> [1.0]*n   <span class="cm"># 전부 0이면 등가중 폴백</span>
+tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</span></div>
+    <div class="callout c-tip">🔑 <b>대표 기사(rep) 선정.</b> 뉴스 B그룹(제목·출처·event_type 등)은 <code>scored = sort(analyzed, key = importance×weight desc)</code>의 <b>1위 기사</b>에서 복사한다. 시끄럽지만 저신뢰인 루머가 대표가 되지 않도록 <b>강도×신뢰</b>로 정렬(§신뢰가중 심화 참조).</div>
+  </section>
+
+  <!-- ═══════════════════ 공시 ═══════════════════ -->
+  <section id="d-meta">
+    <h2><span class="n disc">📄</span> tb_disclosure · A. 종목·원문 메타 (1~7)</h2>
+    <p class="lead"><span class="owner">build_disclosure_bundle(ticker, trade_date, disclosure_result)</span> — 대표 공시 1건(<code>disclosure_rep</code>)에서 메타를 채운다. <b>신호 유무와 무관하게</b> 원문 식별 메타는 채운다.</p>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">1</span><span class="lin-col">ticker</span><span class="lin-ty">TEXT 🔑</span><span class="src s-sys">SYS 입력</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">스크리닝이 넘긴 종목 심볼(빌더 인자 <code>ticker</code>).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>ticker.upper()</code> — 대문자 통일.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">PK의 한 축(<code>collected_at</code>과 복합키). tb_daily_pick FK.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">2</span><span class="lin-col">collected_at</span><span class="lin-ty">TIMESTAMP 🔑</span><span class="src s-sys">SYS 생성</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">빌더 실행 순간의 시스템 시각 <code>_now()</code>.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>datetime.now(timezone.utc).isoformat(timespec="seconds")</code> — UTC·초 단위.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">PK의 한 축. 새 스냅샷마다 새 값 → 시계열 append(덮어쓰기 X). Strategist는 <code>ORDER BY collected_at DESC LIMIT 1</code>로 최신 행.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">3</span><span class="lin-col">trade_date</span><span class="lin-ty">DATE 🔗</span><span class="src s-sys">SYS 입력</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">스케줄러 <code>run_cycle</code>의 <code>date.today().isoformat()</code>이 빌더로 전달.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">가공 없음(그대로 저장). 구 이름 <code>as_of</code>.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">분석 기준일 = tb_daily_pick의 trade_date FK. 회고·백테스트 day 조인 키.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">4</span><span class="lin-col">has_signal</span><span class="lin-ty">INT 0/1</span><span class="src s-code">CODE 판정</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">대표 공시 결과의 <code>signal</code> 존재 여부.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">빌더 진입 시 0으로 시작 → <code>sig = disclosure_result.signal</code>이 <code>None</code>이 아니면 1로 set.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b"><b>0이면 8~18번 분석 컬럼 전부 null(기본값)</b>. Strategist는 <code>has_signal=1</code> 행만 읽음. 공시 없는 종목도 이 행 자체는 생성(균일 50행).</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">5</span><span class="lin-col">filing_title</span><span class="lin-ty">TEXT</span><span class="src s-sec">SEC</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">대표 공시 <code>disclosure_result.item.title</code> (sec_collector가 8-K 제목/Item으로 구성).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">가공 없음. 없으면 빈 문자열.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">표시·추적용. 신호 없어도 채움(메타 조기 세팅).</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">6</span><span class="lin-col">filing_no</span><span class="lin-ty">TEXT</span><span class="src s-sec">SEC</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b"><code>item.meta["accession_no"]</code> — SEC 접수번호.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>meta.get("accession_no") or ""</code>.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">원문 역추적 ID(감사). <b>뉴스 disclosure_ref가 이 값을 참조</b>해 교차확인.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">7</span><span class="lin-col">filed_at</span><span class="lin-ty">TIMESTAMP</span><span class="src s-sec">SEC</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">SEC submissions의 <code>acceptanceDateTime</code>(초 포함) 우선, 없으면 <code>filingDate</code>.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>meta.get("accepted_at") or meta.get("filed_at") or ""</code>.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">실제 제출 시각 → 미래정보(look-ahead) 방지·백테스트 day0 근거.</div></div>
+      </div>
+      <div class="lin-ex"><b>예</b> accepted_at="2026-07-02T16:30:12Z" 있으면 그 값, 없으면 filingDate "2026-07-02".</div>
+    </div>
+  </section>
+
+  <section id="d-signal">
+    <h2><span class="n disc">📄</span> tb_disclosure · B. 신호 점수 (8~14)</h2>
+    <p class="lead">LLM(<code>DisclosureSignal</code>) 원시값을 코드가 정규화·환산. <code>conf = _CERTAINTY.get(certainty_level, 0.5)</code>를 먼저 구해 여러 컬럼이 공유.</p>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">8</span><span class="lin-col">event_type</span><span class="lin-ty">TEXT(12종)</span><span class="src s-llm">LLM→CODE</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.event_type</code>(8-K는 Item맵 기본값 참고, Form4는 코드가 <code>insider_trade</code> 직접 지정).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>norm_event(sig.event_type)</code> — 별칭 흡수(material_agreement→product_deal, share_repurchase→buyback), 미등록은 <code>other</code>.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">통일 12종 중 하나. Strategist 핵심 판단재료 · <b>뉴스 disclosure_ref 매칭 키</b>.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">12</span><span class="lin-col">importance</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-llm">LLM→CODE</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.importance</code>(0~10 정수). 상폐=10·대형M&amp;A=8~9·일상=1~2.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>_n10(sig.importance)</code> → 0~1.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b"><b>방향 없는 순수 강도</b> 축. <code>sentiment_score</code> 계산의 입력이 됨.</div></div>
+      </div>
+      <div class="lin-ex"><b>예</b> LLM importance=8 → <code>_n10</code> → <b>0.8</b>.</div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">14</span><span class="lin-col">confidence</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-llm">LLM→CODE</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.certainty_level</code>(High/Medium/Low).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>_CERTAINTY.get(certainty_level, 0.5)</code> → round 2. High=0.9·Med=0.6·Low=0.3.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">LLM 자기확신도. <b>sentiment_score의 호재 감쇠 계수</b>로도 쓰임(아래 10번).</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">9</span><span class="lin-col">sentiment</span><span class="lin-ty">TEXT(라벨)</span><span class="src s-llm">LLM</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.sentiment</code>(positive/negative/neutral/mixed).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>sig.sentiment or "neutral"</code>. <b>공시는 LLM 라벨을 그대로</b>(뉴스와 달리 집계 파생 아님 — 종목당 대표 1건이라).</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">사람이 읽는 표시용 방향. 10번 점수의 부호 입력(<code>_sign</code>).</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">10</span><span class="lin-col">sentiment_score</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">CODE 계산</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">위 <code>sentiment</code>(부호)·<code>importance</code>(강도)·<code>confidence</code>(감쇠) 3개를 결합.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>_senti_score(_sign(sentiment) × importance, confidence)</code>. <b>호재만 confidence로 중립쪽 감쇠</b>, 악재는 유지. <code>0.5 + 0.5×signed</code>.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">0=강악재·0.5=중립·1=강호재. Strategist 핵심 방향 신호.</div></div>
+      </div>
+      <div class="lin-ex"><b>예</b> positive·imp0.8·conf0.9 → signed=+0.8×0.9=0.72 → <b>0.5+0.36=0.86</b>. / negative·imp0.9 → signed=−0.9(감쇠X) → <b>0.05</b>.</div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">11</span><span class="lin-col">reason</span><span class="lin-ty">TEXT</span><span class="src s-llm">LLM</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.reason</code>(영어 한 줄, 수치 포함 권장).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">가공 없음.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b"><code>sentiment_score</code>에 대한 근거(계산식 아님, 내용 설명). 스키마상 점수 바로 아래 배치.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">13</span><span class="lin-col">risk_score</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">LLM→CODE 집계</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.risk_score</code>(0~10) + 하드리스크 <code>risk_score_min</code> + 오늘 공시 전체.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">① 파이프라인: 하드리스크 있으면 <code>risk = max(sig.risk_score, hard_risk.risk_score_min)</code>. ② 빌더: <code>_n10(sig.risk_score)</code>. ③ <b>스케줄러 override</b>: <code>disclosure_risk_max</code>(오늘 공시 전체 <code>_n10(risk)</code> 최댓값)가 더 크면 그 값으로 대체.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b"><b>오늘 최고 위험 보존</b> — 대표가 아닌 공시의 위험도 묻히지 않음. 호재/악재와 별개 축.</div></div>
+      </div>
+      <div class="lin-ex"><b>예</b> 대표=M&amp;A(risk 0.3)인데 같은 날 소송 공시(risk 0.9) 있으면 → <b>risk_score=0.9</b> 보존.</div>
+    </div>
+  </section>
+
+  <section id="d-safe">
+    <h2><span class="n disc">📄</span> tb_disclosure · C. 안전·요약 (15~18)</h2>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">15</span><span class="lin-col">hard_block</span><span class="lin-ty">INT 0/1 🛡️</span><span class="src s-code">CODE 집계</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">각 공시의 <code>final_permission</code>(decide_final_permission 결과) — BLOCK_ALL·BLOCK_BUY 여부.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">① 빌더: 대표 공시 <code>final_permission ∈ {BLOCK_ALL, BLOCK_BUY}</code>면 1. ② 스케줄러 <code>disclosure_block</code>: 오늘 공시 중 <b>하나라도</b> BLOCK류면 1(<b>OR 집계</b>).</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">1=매수 즉시 차단. 파산·상폐·거래정지·감사인변경 등 방어(하드리스크 + Item 3.01/4.01).</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">16</span><span class="lin-col">hard_block_reason</span><span class="lin-ty">TEXT 🛡️</span><span class="src s-code">CODE</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">차단 유발 공시의 <code>final_reason</code>.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">빌더는 대표의 final_reason, 스케줄러는 OR로 처음 잡힌 사유를 <code>or</code>로 보존.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">차단 근거 기록(감사). hard_block=0이면 null.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">17</span><span class="lin-col">summary</span><span class="lin-ty">TEXT</span><span class="src s-llm">LLM</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.summary</code>(공시 전문 3~4줄 요약, 영어).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">가공 없음(to_prompt에서만 개행 공백접기).</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">사람·Strategist가 읽는 컨텍스트.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">18</span><span class="lin-col">keywords</span><span class="lin-ty">TEXT[]</span><span class="src s-llm">LLM</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.keywords</code>(핵심 5개).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>list(sig.keywords or [])</code>. DB 저장 시 <code>", ".join</code>으로 접어 TEXT.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">태그·검색용(선택).</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ 뉴스 ═══════════════════ -->
+  <section id="n-meta">
+    <h2><span class="n news">📰</span> tb_news · A. 종목·시각 메타 (1~4)</h2>
+    <p class="lead"><span class="owner">build_news_bundle(ticker, trade_date, news_results)</span> — 오늘 그 종목 뉴스 <b>전체</b>를 신뢰가중 집계. <code>analyzed = [r for r in results if r.signal]</code>가 없으면 has_signal=0 빈 행.</p>
+    <div class="callout c-info">1~4번은 공시 A그룹과 동일 원리(SYS): <code>ticker</code>=입력 대문자·PK / <code>collected_at</code>=<code>_now()</code>·PK / <code>trade_date</code>=스케줄러 전달 / <code>has_signal</code>=analyzed 1건↑이면 1.</div>
+  </section>
+
+  <section id="n-rep">
+    <h2><span class="n news">📰</span> tb_news · B. 대표 기사 복사 (5~13)</h2>
+    <p class="lead"><b>대표 기사(rep)</b> = <code>scored = sort(analyzed, key = (signal.importance × weight) desc)</code>의 1위. 5~9·11~13은 rep에서 복사, <b>10 disclosure_ref는 스케줄러가 매칭 주입</b>.</p>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">5</span><span class="lin-col">news_title</span><span class="lin-ty">TEXT</span><span class="src s-rss">RSS</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">대표 기사 <code>rep.item.title</code>(RSS &lt;title&gt;).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">가공 없음.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">신뢰가중 최상위 1건의 제목.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">6</span><span class="lin-col">source</span><span class="lin-ty">TEXT</span><span class="src s-rss">RSS</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b"><code>rep.item.meta["source"]</code>(RSS &lt;source&gt; 태그의 언론사명).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>(meta.get("source") or "").strip()</code>.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">대표 기사 출처 표시(예: reuters.com).</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">7</span><span class="lin-col">published_at</span><span class="lin-ty">TIMESTAMP</span><span class="src s-rss">RSS</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b"><code>rep.item.published_at</code>(RSS &lt;pubDate&gt;, parsedate_to_datetime).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>_pub.isoformat() if _pub else ""</code>.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b"><b>발행</b> 시각(≠ 수집 collected_at) → 신선도·look-ahead 방지.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">8</span><span class="lin-col">ref</span><span class="lin-ty">TEXT</span><span class="src s-rss">RSS</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b"><code>rep.item.url</code>(기사 원문 링크).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">가공 없음.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">원문 추적(공시 filing_no와 달리 중복 아님이라 유지).</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">9</span><span class="lin-col">event_type</span><span class="lin-ty">TEXT(12종)</span><span class="src s-llm">LLM→CODE</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">대표 기사 LLM <code>rep.signal.event_type</code>.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>norm_event(rep.signal.event_type)</code> 정규화.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">대표 사건 종류 · <b>disclosure_ref(10번) 매칭의 키</b>.</div></div>
+      </div>
+    </div>
+
+    <div class="lin" style="border-color:#fbbf24">
+      <div class="lin-h" style="background:#fffdf0"><span class="lin-no">10</span><span class="lin-col">disclosure_ref</span><span class="lin-ty">TEXT 🆕</span><span class="src s-code">CODE 매칭</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">뉴스 대표 <code>event_type</code>(9번) + <b>같은 종목 오늘 공시</b>(<code>BundleAccumulator._disc[ticker]</code>).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">스케줄러가 <code>has_signal</code>일 때 <code>disclosure_ref_for(ticker, event_type)</code> 호출 → 오늘 공시 중 <code>norm_event(sig.event_type)==event_type</code>이고 accession 있는 것 필터 → <b>importance 최대 1건</b>의 <code>filing_no</code>. <code>event_type ∈ {None,"other"}</code>이면 매칭 안 함.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">뉴스 사건을 뒷받침하는 <b>공식 공시번호</b>(없으면 null). 삭제한 루머/팩트 이진판별 대신 <b>공식 문서 존재 여부</b>로 사실성 보강.</div></div>
+      </div>
+      <div class="lin-ex"><b>예</b> 뉴스 event_type=earnings인데 같은 날 AAPL 8-K(2.02 실적) accession="0000320193-26-00042" 있으면 → <b>disclosure_ref=그 accession</b>. 공시 없으면 null.</div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">11</span><span class="lin-col">reason</span><span class="lin-ty">TEXT</span><span class="src s-llm">LLM</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">대표 기사 <code>rep.signal.reason</code>.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">가공 없음.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">sentiment_score 근거(대표 기사 관점).</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">12·13</span><span class="lin-col">summary · keywords</span><span class="lin-ty">TEXT · TEXT[]</span><span class="src s-llm">LLM</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">대표 기사 <code>rep.signal.summary</code> · <code>rep.signal.keywords</code>.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">summary 그대로 · keywords <code>list(... or [])</code>(DB는 ", ".join).</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">대표 기사 요약·키워드.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="n-agg">
+    <h2><span class="n news">📰</span> tb_news · C. 전체 기사 신뢰가중 집계 (14~22)</h2>
+    <p class="lead">대표 1건이 아니라 <b>analyzed 전체</b>를 <code>weight = _news_conf</code>로 가중 집계. <code>tw = Σweight</code>가 공통 분모.</p>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">14</span><span class="lin-col">news_count</span><span class="lin-ty">INT</span><span class="src s-code">CODE</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">오늘 분석된 기사 목록 <code>analyzed</code>.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>len(analyzed)</code>.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">관심도 신호(건수).</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">15</span><span class="lin-col">importance</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">CODE 집계</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">각 기사 <code>_n10(signal.importance)</code> = <code>mags</code>, 가중치 <code>weights</code>.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>Σ(m × w) / tw</code> — 신뢰가중 평균. <b>방향 무관</b>(호·악재 섞여도 상쇄 안 됨).</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">오늘 뉴스 전체 강도. 같은 강도면 방향 구성과 무관하게 항상 같은 값(일관성).</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">16</span><span class="lin-col">peak_importance</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">CODE 집계</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b"><code>mags</code> 중 <b>신뢰검증 기사</b>(<code>_news_credible</code>=확정 or trust≥0.6 or ALLOW)만.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>cred_mags = [m for credible]</code> → <code>max([importance] + cred_mags)</code>.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">평균(15번)에 희석되기 전 <b>가장 센 믿을 만한 한 방</b>. 신뢰 기사 없으면 importance로 수렴(<b>peak ≥ importance 불변식</b>). peak&gt;importance면 low-conf 딱지. 저신뢰 과장이 가짜 peak 세우는 편향 차단.</div></div>
+      </div>
+      <div class="lin-ex"><b>예</b> 확정 대형기사 imp0.9 + 루머 imp0.3 → importance(가중평균)=0.5여도 peak=<b>0.9</b>. 반대로 imp0.9가 저신뢰 루머면 cred 아님 → peak=importance로 수렴.</div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">17</span><span class="lin-col">risk_score</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">CODE 집계</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">각 기사 <code>_n10(signal.risk_score)</code>.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>Σ(_n10(risk) × w) / tw</code> 신뢰가중 평균.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">오늘 뉴스 전체 위험도. 방향과 별개 축.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">18</span><span class="lin-col">sentiment_score</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">CODE 집계</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b"><code>signed = [_n10(imp) × _sign(sentiment)]</code>(방향×강도) + confidence(22번).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>strong_neg = min(signed) ≤ −0.7</code>. <code>agg = min(signed) if strong_neg else Σ(s×w)/tw</code> → <code>_senti_score(agg, confidence)</code>.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b"><b>강한 악재 1건이면 그쪽으로</b>(보수). 아니면 신뢰가중 평균. 호재는 confidence로 감쇠, 악재 유지.</div></div>
+      </div>
+      <div class="lin-ex"><b>예</b> 강악재(signed −0.8) 1건 섞이면 → agg=−0.8 → <b>0.1</b>. 전부 약호재면 가중평균 후 감쇠.</div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">19</span><span class="lin-col">sentiment</span><span class="lin-ty">TEXT(라벨)</span><span class="src s-code">CODE 파생</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">18번 <code>sentiment_score</code>, 방향별 가중합 <code>pos_w</code>·<code>neg_w</code>.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>negative if strong_neg</code> → <code>mixed if min(pos_w,neg_w)/tw ≥ 0.30</code> → <code>positive if score&gt;0.5</code> → <code>negative if &lt;0.5</code> → <code>neutral</code>.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b"><b>라벨을 최종 점수에서 파생 → 라벨↔점수 항상 일치</b>. 호·악재 둘 다 유의미하면 mixed 신설.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">20</span><span class="lin-col">source_trust</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">LLM→CODE 집계</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">각 기사 LLM <code>signal.source_trust</code>(0~1, 출처+본문 톤 판단).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>Σ((trust or 0) × w) / tw</code>.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b"><b>LLM·해석·사후</b> 신뢰. 루머·펌프 방어. grade_score와 별개 축.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">21</span><span class="lin-col">grade_score</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">CODE 집계</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">각 기사 <code>source_grade</code>(<code>classify_source</code> 도메인 판정 ALLOW/GRAY/BLOCK).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>Σ(_GRADE_SCORE.get(grade, 0.6) × w) / tw</code>. ALLOW1·GRAY.6·BLOCK0, 미등급 0.6.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b"><b>코드·도메인·사전</b> 관문(감사 가능 기준선). source_trust(LLM·사후)와 <b>별개 축</b>.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">22</span><span class="lin-col">confidence</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">CODE 집계</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">기사별 <code>raw_weights = [_news_conf(sig)]</code>(감쇠 폴백 전 원본).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>sum(raw_weights) / len(raw_weights)</code> 단순평균, round 2.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">저신뢰 뉴스뿐이면 낮게(정직) → sentiment_score 호재 감쇠에 재사용. "이 신호 믿어도 되나"를 Strategist가 가중치로.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="n-hard">
+    <h2><span class="n news">📰</span> tb_news · D. 코드 하드 스캔 (23~24)</h2>
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">23·24</span><span class="lin-col">hard_block · hard_block_reason</span><span class="lin-ty">INT 0/1 · TEXT 🛡️</span><span class="src s-code">CODE</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">모든 뉴스 결과 <code>r.final_permission</code>(사전필터 BLOCK 또는 LLM 권한).</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>for r in results: if r.final_permission ∈ {BLOCK_ALL, BLOCK_BUY}: hard_block=1</code>, reason=처음 잡힌 <code>final_reason</code>(<code>or</code> 보존).</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">어느 기사든 치명 악재(파산·상폐·대규모 희석) 감지 시 1 → 매수 금지. <b>analyzed 뿐 아니라 drop된 결과도 순회</b>(출처 BLOCK 뉴스도 반영).</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="n-ev">
+    <h2><span class="n news">📰</span> tb_news · E. 코드 정렬 상위 3 (25)</h2>
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">25</span><span class="lin-col">top_evidence</span><span class="lin-ty">TEXT[] 고정3</span><span class="src s-code">CODE 정렬</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">대표선정과 <b>같은 <code>scored</code></b>(importance×weight 내림차순) 상위 3.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>["{source}: {title[:60]}" for scored[:3]]</code> → <code>(ev + [None,None,None])[:3]</code> 고정 3칸. DB는 <code>" | ".join</code>(None 제외).</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">근거 헤드라인 정확히 3개(부족분 None). 여러 출처를 Strategist가 비교 판단.</div></div>
+      </div>
+      <div class="lin-ex"><b>예</b> <code>["reuters.com: NVIDIA beats Q2…", "cnbc.com: guidance raised…", None]</code>(2건뿐이면 3칸째 None).</div>
+    </div>
+  </section>
+
+  <!-- ══════════ 신뢰가중 심화 ══════════ -->
+  <section id="weight">
+    <h2><span class="n core">★</span> 신뢰가중치 weight — 뉴스 집계의 심장</h2>
+    <div class="callout c-tip">뉴스 C그룹(15~22)과 대표선정·top_evidence가 모두 이 <b>기사별 weight</b>에 의존한다. weight를 한 번 이해하면 tb_news 집계 전체가 풀린다.</div>
+    <div class="flow"><span class="cm"># 기사 1건의 신뢰가중치 (0~1)</span>
+weight = certainty_factor × confirmed_factor × source_trust
+  certainty_factor = {High:0.9, Medium:0.6, Low:0.3, 기타:0.5}[certainty_level]  <span class="cm"># LLM 확신</span>
+  confirmed_factor = 1.0 if is_confirmed else 0.5                                 <span class="cm"># 확정/추측</span>
+  source_trust     = LLM 출처신뢰 (None이면 1.0)                                   <span class="cm"># 0.0 오인 방지</span>
+
+<span class="cm"># 집계 분모 · 폴백</span>
+weights = raw_weights  (전부 0이면 [1.0]*n 등가중 — 강도/위험 0붕괴 방지)
+tw = Σ weights
+
+<span class="cm"># 이 weight가 결정하는 것</span>
+importance     = Σ(_n10(imp)·w)/tw          risk_score  = Σ(_n10(risk)·w)/tw
+source_trust   = Σ(trust·w)/tw              grade_score = Σ(_GRADE_SCORE·w)/tw
+sentiment_score= _senti_score(Σ(signed·w)/tw, confidence)   <span class="cm"># 강악재는 min 우선</span>
+대표기사 rep   = argmax(importance × weight)  → news_title·source·event_type·reason·ref
+top_evidence   = scored[:3]                  confidence = mean(raw_weights)</div>
+    <table>
+      <thead><tr><th>기사</th><th>certainty</th><th>confirmed</th><th>source_trust</th><th>→ weight</th><th>영향</th></tr></thead>
+      <tbody>
+        <tr><td>로이터 확정 실적</td><td>High(0.9)</td><td>✅(1.0)</td><td>0.9</td><td><b>0.81</b></td><td>대표·집계 지배</td></tr>
+        <tr><td>2급 매체 추측</td><td>Low(0.3)</td><td>❌(0.5)</td><td>0.4</td><td><b>0.06</b></td><td>거의 무시</td></tr>
+        <tr style="background:var(--rose-bg)"><td>무신뢰 루머</td><td>Low(0.3)</td><td>❌(0.5)</td><td>0.0</td><td><b>0.0</b></td><td>가중 0(폴백 대상)</td></tr>
+      </tbody>
+    </table>
+    <hr>
+    <p style="text-align:center;color:var(--dim);font-size:13px">Quantinue · 컬럼값 산출·근거 데이터 계보 · <code>analysis_bundle.py</code>·<code>bundle_snapshot.py</code> 1:1 · 담당 정창욱 🧬</p>
+  </section>
+  </main>
+</div>
+<script>
+  const links = [...document.querySelectorAll('#toc a')];
+  const map = {}; links.forEach(a => { const id = a.getAttribute('href').slice(1); const s = document.getElementById(id); if (s) map[id] = { a, s }; });
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { links.forEach(l => l.classList.remove('active')); const m = map[e.target.id]; if (m) m.a.classList.add('active'); } });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  Object.values(map).forEach(m => obs.observe(m.s));
+</script>
+</body></html>

@@ -9,11 +9,27 @@ DB는 MVP 단계라 SQLite. (확장 시 Postgres+TimescaleDB는 미정)
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 _DB = Path(__file__).resolve().parents[2] / "data" / "quantinue.sqlite"
+
+# 저장은 UTC 유지(look-ahead·미국장 정합), 표시만 KST로 변환(리뷰 절충안).
+_KST = timezone(timedelta(hours=9))
+
+
+def to_kst(iso_utc: str | None) -> str | None:
+    """UTC ISO 문자열 → KST(+09:00) 표시 문자열. 저장값은 바꾸지 않는다(표시 전용)."""
+    if not iso_utc:
+        return iso_utc
+    try:
+        dt = datetime.fromisoformat(iso_utc.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(_KST).isoformat(timespec="seconds")
+    except (ValueError, TypeError):
+        return iso_utc
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS disclosure_signals (
@@ -50,45 +66,40 @@ CREATE TABLE IF NOT EXISTS news_signals (
   verdict TEXT, summary TEXT, keywords TEXT,
   return_1d REAL, return_3d REAL, return_5d REAL, outcome TEXT
 );
+"""
 
--- ── Strategist 전달 계약: 번들 스냅샷 (팀 명세 tb_disclosure/tb_news) ──
--- 위 *_signals(per-signal 분석로그, 스케줄러·백테스트용)와 별개.
--- 여기엔 DisclosureBundle/NewsBundle(전략가가 읽는 출력)을 시계열로 append.
--- PK=(ticker, collected_at): 새 공시/기사 뜰 때마다 새 행, Strategist는 최신 행.
-CREATE TABLE IF NOT EXISTS tb_disclosure (
-  ticker TEXT NOT NULL,
-  collected_at TEXT NOT NULL,
-  trade_date TEXT,
-  has_signal INTEGER,
+# ── Strategist 전달 계약: 번들 스냅샷 (팀 명세 tb_disclosure/tb_news) ──
+# 위 *_signals(per-signal 분석로그, 스케줄러·백테스트용)와 별개.
+# DisclosureBundle/NewsBundle(전략가가 읽는 출력)을 시계열로 append.
+# PK = 단일 _id(AUTOINCREMENT, 리뷰 반영) · (ticker, collected_at)은 UNIQUE로 병행
+# (새 공시/기사 뜰 때마다 새 행, Strategist는 종목별 최신 행). is_positive = sentiment_score>0.5.
+_TB_DISC_DDL = """CREATE TABLE IF NOT EXISTS tb_disclosure (
+  _id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticker TEXT NOT NULL, collected_at TEXT NOT NULL, trade_date TEXT, has_signal INTEGER,
   filing_title TEXT, filing_no TEXT, filed_at TEXT,
-  event_type TEXT, sentiment TEXT, sentiment_score REAL, reason TEXT,
+  event_type TEXT, sentiment TEXT, sentiment_score REAL, is_positive INTEGER, reason TEXT,
   importance REAL, risk_score REAL, confidence REAL,
-  hard_block INTEGER, hard_block_reason TEXT,
-  summary TEXT, keywords TEXT,
-  PRIMARY KEY (ticker, collected_at)
-);
+  hard_block INTEGER, hard_block_reason TEXT, summary TEXT, keywords TEXT,
+  UNIQUE (ticker, collected_at)
+);"""
 
-CREATE TABLE IF NOT EXISTS tb_news (
-  ticker TEXT NOT NULL,
-  collected_at TEXT NOT NULL,
-  trade_date TEXT,
-  has_signal INTEGER,
-  news_title TEXT, source TEXT, published_at TEXT,
-  news_count INTEGER, news_confirmed INTEGER, news_rumor INTEGER,
-  event_type TEXT, sentiment TEXT, sentiment_score REAL, reason TEXT,
+_TB_NEWS_DDL = """CREATE TABLE IF NOT EXISTS tb_news (
+  _id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticker TEXT NOT NULL, collected_at TEXT NOT NULL, trade_date TEXT, has_signal INTEGER,
+  news_title TEXT, source TEXT, published_at TEXT, news_count INTEGER,
+  event_type TEXT, disclosure_ref TEXT, sentiment TEXT, sentiment_score REAL, is_positive INTEGER, reason TEXT,
   importance REAL, peak_importance REAL, risk_score REAL, confidence REAL,
-  source_trust REAL, grade_score REAL, confirmed_score REAL, fact_check TEXT,
+  source_trust REAL, grade_score REAL,
   hard_block INTEGER, hard_block_reason TEXT,
   top_evidence TEXT, summary TEXT, keywords TEXT, ref TEXT,
-  PRIMARY KEY (ticker, collected_at)
-);
-"""
+  UNIQUE (ticker, collected_at)
+);"""
 
 # 번들 스냅샷 테이블 컬럼(모델 필드 순서와 동일). keywords/top_evidence는 TEXT로 접어 저장.
 _TB_DISC_COLS = [
     "ticker", "collected_at", "trade_date", "has_signal",
     "filing_title", "filing_no", "filed_at",
-    "event_type", "sentiment", "sentiment_score", "reason",
+    "event_type", "sentiment", "sentiment_score", "is_positive", "reason",
     "importance", "risk_score", "confidence",
     "hard_block", "hard_block_reason", "summary", "keywords",
 ]
@@ -96,10 +107,10 @@ _TB_DISC_COLS = [
 _TB_NEWS_COLS = [
     "ticker", "collected_at", "trade_date", "has_signal",
     "news_title", "source", "published_at",
-    "news_count", "news_confirmed", "news_rumor",
-    "event_type", "sentiment", "sentiment_score", "reason",
+    "news_count",
+    "event_type", "disclosure_ref", "sentiment", "sentiment_score", "is_positive", "reason",
     "importance", "peak_importance", "risk_score", "confidence",
-    "source_trust", "grade_score", "confirmed_score", "fact_check",
+    "source_trust", "grade_score",
     "hard_block", "hard_block_reason", "top_evidence", "summary", "keywords", "ref",
 ]
 
@@ -122,6 +133,24 @@ _COLS = [
 ]
 
 
+def _migrate_bundle_pk(conn: sqlite3.Connection, table: str,
+                       create_sql: str, cols: list[str]) -> None:
+    """복합PK 구버전 tb_* → 단일 _id PK 신버전으로 재생성(리뷰 반영).
+
+    SQLite는 ALTER로 PK를 못 바꾸므로 rename→새 스키마 생성→데이터 복사→drop.
+    _id가 이미 있으면(신규 DB이거나 마이그레이션 완료) 아무것도 안 한다.
+    """
+    existing = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+    if not existing or "_id" in existing:
+        return
+    conn.execute(f"ALTER TABLE {table} RENAME TO {table}__old")
+    conn.executescript(create_sql)                       # 새 스키마로 원명 재생성
+    common = [c for c in cols if c in existing]           # 구DB에 있던 컬럼만 복사
+    collist = ", ".join(common)
+    conn.execute(f"INSERT INTO {table} ({collist}) SELECT {collist} FROM {table}__old")
+    conn.execute(f"DROP TABLE {table}__old")
+
+
 def _migrate(conn: sqlite3.Connection) -> None:
     """기존 DB에 없는 컬럼을 보강(ADD COLUMN). CREATE IF NOT EXISTS로는 안 붙음."""
     def _cols(t: str) -> set:
@@ -136,12 +165,23 @@ def _migrate(conn: sqlite3.Connection) -> None:
         for c in ("verdict", "summary", "keywords"):
             if c not in existing:
                 conn.execute(f"ALTER TABLE {t} ADD COLUMN {c} TEXT")
+    # 뉴스 번들 신설 컬럼(명세 최최종 2026-07-09 #10 disclosure_ref) — 기존 DB 보강
+    if "disclosure_ref" not in _cols("tb_news"):
+        conn.execute("ALTER TABLE tb_news ADD COLUMN disclosure_ref TEXT")
+    # 번들 스냅샷: 복합PK(ticker,collected_at) → 단일 _id PK 재생성(리뷰 반영)
+    _migrate_bundle_pk(conn, "tb_disclosure", _TB_DISC_DDL, _TB_DISC_COLS)
+    _migrate_bundle_pk(conn, "tb_news", _TB_NEWS_DDL, _TB_NEWS_COLS)
+    # is_positive(sentiment_score>0.5 불리언 파생) — 기존 DB 보강
+    for t in ("tb_disclosure", "tb_news"):
+        if "is_positive" not in _cols(t):
+            conn.execute(f"ALTER TABLE {t} ADD COLUMN is_positive INTEGER")
 
 
 def _conn() -> sqlite3.Connection:
     _DB.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(_DB)
-    conn.executescript(_SCHEMA)   # _SCHEMA는 여러 CREATE 문
+    conn.executescript(_SCHEMA)                              # per-signal 로그 테이블
+    conn.executescript(_TB_DISC_DDL + "\n" + _TB_NEWS_DDL)  # 번들 스냅샷(단일 _id PK)
     _migrate(conn)
     return conn
 
@@ -310,7 +350,7 @@ def _bundle_row(bundle: Any, cols: list[str]) -> dict[str, Any]:
         if c == "keywords":
             v = ", ".join(v) if v else None
         elif c == "top_evidence":
-            v = " | ".join(v) if v else None
+            v = " | ".join(x for x in v if x) if v else None   # None 패딩 제외
         row[c] = v
     return row
 
@@ -352,6 +392,23 @@ def latest_news(ticker: str) -> sqlite3.Row | None:
         return conn.execute(
             "SELECT * FROM tb_news WHERE ticker=? "
             "ORDER BY collected_at DESC LIMIT 1", (ticker.upper(),)).fetchone()
+
+
+# ── Strategist 압축 신호 (저장 상세 → 판단용 핵심만) ──────────────────
+# 공시·뉴스를 통합하지 않고 각자 최신 행에서 압축 dict를 뽑는다(1h/5m 주기 독립).
+
+def latest_disclosure_signal(ticker: str) -> dict:
+    """종목 최신 공시 스냅샷 → Strategist 압축 신호. 없으면 has_signal=false."""
+    from app.common.analysis_bundle import pack_disclosure_signal
+    row = latest_disclosure(ticker)
+    return pack_disclosure_signal(dict(row) if row is not None else {})
+
+
+def latest_news_signal(ticker: str) -> dict:
+    """종목 최신 뉴스 스냅샷 → Strategist 압축 신호(peak_importance 포함)."""
+    from app.common.analysis_bundle import pack_news_signal
+    row = latest_news(ticker)
+    return pack_news_signal(dict(row) if row is not None else {})
 
 
 # ── 백테스트: 전방수익률 채우기 대상/기록 ────────────────────────────

@@ -11,7 +11,9 @@
 명세 수용으로 원안 대비 제거된 필드:
   - 공시(24→18): company_name·category(→tb_universe JOIN)·confirmed_score(늘 1.0)·
     fact_check(상수 문장)·verdict(sentiment_score+reason 중복)·ref(filing_no 중복).
-  - 뉴스(31→28): company_name·category(JOIN)·verdict(sentiment+reason 재진술).
+  - 뉴스(31→24): company_name·category(JOIN)·verdict(sentiment+reason 재진술) +
+    루머/팩트 이진판별 4필드(news_confirmed·news_rumor·confirmed_score·fact_check,
+    2026-07-08 팀 결정 — LLM 이진판별 부정확, 신뢰도는 source_trust·grade_score로).
   - 두 객체 공통: as_of→**trade_date**, created_at→**collected_at** 개명,
     reason을 sentiment_score 바로 아래로 재배치.
 """
@@ -57,20 +59,59 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def _fact_check_news(confirmed: int, count: int, trust: float, grade: float) -> str:
-    """뉴스 팩트체크 상태를 확정비율·출처신뢰·등급으로 코드 판정(LLM 불필요)."""
-    ratio = confirmed / count if count else 0.0
-    if ratio >= 0.5 and trust >= 0.6:
-        status = "Verified"
-    elif confirmed == 0 or trust < 0.4:
-        status = "Unverified (rumor)"
-    else:
-        status = "Partially verified"
-    return f"{status} — {confirmed}/{count} confirmed, trust {trust}, grade {grade}."
-
-
 def _head(ticker: str, kind: str, trade_date: str) -> str:
     return f"[{ticker}] {kind} · {trade_date}"
+
+
+# ── Strategist 전달용 압축 신호 (저장 상세와 분리된 계약) ──────────────
+# 저장(tb_disclosure/tb_news, 상세 컬럼)과 별개로, Strategist에겐 판단에 필요한
+# 핵심 필드만 JSON으로 넘긴다. 공시·뉴스는 통합하지 않고 각자(1h/5m 주기) 전달.
+# 계약 명칭은 _score 접미로 통일: importance→importance_score, source_trust→trust_score.
+# (내부 DB 컬럼·LLM 스키마는 그대로 두고 여기서만 매핑 — 파급 최소.)
+
+def _summary_with_block(d: dict) -> str:
+    """hard_block이면 차단 사유를 summary 앞에 붙인다(전략가가 '왜 막혔나'를 보게)."""
+    summary = d.get("summary") or ""
+    if d.get("hard_block") and d.get("hard_block_reason"):
+        summary = f"[차단: {d['hard_block_reason']}] {summary}".strip()
+    return summary
+
+
+def pack_disclosure_signal(d: dict) -> dict:
+    """공시 dict(번들.model_dump() 또는 DB Row) → Strategist 압축 신호."""
+    has = bool(d.get("has_signal"))
+    out: dict = {"has_signal": has}
+    if has:
+        out.update({
+            "event_type": d.get("event_type"),
+            "importance_score": d.get("importance"),
+            "sentiment_score": d.get("sentiment_score"),
+            "risk_score": d.get("risk_score"),
+        })
+    out["hard_block"] = bool(d.get("hard_block"))
+    if has:
+        out["summary"] = _summary_with_block(d)
+    return out
+
+
+def pack_news_signal(d: dict) -> dict:
+    """뉴스 dict → Strategist 압축 신호. peak_importance 포함(강신호 희석 방지)."""
+    has = bool(d.get("has_signal"))
+    out: dict = {"has_signal": has}
+    if has:
+        out.update({
+            "article_count": d.get("news_count"),
+            "event_type": d.get("event_type"),
+            "importance_score": d.get("importance"),
+            "peak_importance": d.get("peak_importance"),
+            "sentiment_score": d.get("sentiment_score"),
+            "risk_score": d.get("risk_score"),
+            "trust_score": d.get("source_trust"),
+        })
+    out["hard_block"] = bool(d.get("hard_block"))
+    if has:
+        out["summary"] = _summary_with_block(d)
+    return out
 
 
 # ── 공시 결과 (단독) ─────────────────────────────────────
@@ -90,6 +131,7 @@ class DisclosureBundle(BaseModel):
     event_type: str = "other"
     sentiment: str = "neutral"            # 방향 라벨(sentiment_score에서 파생)
     sentiment_score: float = 0.5          # 0~1: 0=강악재·0.5=중립·1=강호재
+    is_positive: bool = False             # sentiment_score > 0.5 (호재 여부 불리언 파생, 리뷰 반영)
     reason: str = ""                      # sentiment_score 근거 한 줄
     importance: float = 0.0               # 0~1 (강도·중요도, 방향 뺀 별도 축)
     risk_score: float = 0.0               # 0~1
@@ -126,11 +168,24 @@ class DisclosureBundle(BaseModel):
             + (f" · generated {self.collected_at}" if self.collected_at else ""))
         return "\n".join(lines)
 
+    def to_strategist_signal(self) -> dict:
+        """공시 압축 신호(dict). 저장 상세 18/19필드 → 판단용 핵심만."""
+        return pack_disclosure_signal(self.model_dump())
+
 
 # ── 뉴스 결과 (단독) ─────────────────────────────────────
 
 class NewsBundle(BaseModel):
-    """뉴스 분석 결과 — 종목당 1개 스냅샷, 공시와 완전 분리. 28필드(명세 수용)."""
+    """뉴스 분석 결과 — 종목당 1개 스냅샷, 공시와 완전 분리. 24+1필드(명세 최최종 2026-07-09).
+
+    루머/팩트 이진판별 4필드(news_confirmed·news_rumor·confirmed_score·fact_check)는
+    "확정이냐 루머냐를 LLM이 무 자르듯 판별하기 어렵다"는 팀 결정으로 제거. 신뢰도는
+    source_trust(LLM)·grade_score(코드 도메인)·news_count·top_evidence로 커버한다.
+
+    disclosure_ref(신설 #10): 이진판별 대신 **공식 문서 존재 여부**로 사실성 보강 —
+    뉴스 대표 event_type과 같은 종목 오늘 공시가 매칭되면 그 filing_no, 없으면 None.
+    매칭은 순수성 유지를 위해 build 바깥(스케줄러)에서 accumulator 기반으로 주입한다.
+    """
     ticker: str
     trade_date: str                       # 분석 기준일(FK→tb_daily_pick), 구 as_of
     collected_at: str = ""                # 스냅샷 생성 시각(초 포함, PK), 구 created_at
@@ -141,12 +196,12 @@ class NewsBundle(BaseModel):
     published_at: str = ""                # 대표 기사 발행 일시(초 포함)
     # 건수
     news_count: int = 0
-    news_confirmed: int = 0
-    news_rumor: int = 0
     # 뉴스 대표 신호 (0~1)
     event_type: str = "other"
+    disclosure_ref: str | None = None     # 대표 event_type과 매칭된 오늘 공시 filing_no(없으면 None)
     sentiment: str = "neutral"            # 방향 라벨(sentiment_score에서 파생)
     sentiment_score: float = 0.5          # 0~1: 0=강악재·0.5=중립·1=강호재
+    is_positive: bool = False             # sentiment_score > 0.5 (호재 여부 불리언 파생, 리뷰 반영)
     reason: str = ""                      # sentiment_score 근거 한 줄(대표 기사)
     importance: float = 0.0               # 0~1 (강도, 신뢰가중 평균)
     peak_importance: float = 0.0          # 0~1 (집계 전 최고 잠재)
@@ -154,13 +209,11 @@ class NewsBundle(BaseModel):
     confidence: float = 0.0               # 0~1 (LLM 분석 확신도)
     source_trust: float = 0.0             # 0~1 (뉴스 전용, LLM 판단·사후)
     grade_score: float = 0.0              # 0~1 (출처 정책등급·코드·사전: ALLOW1·GRAY.6·BLOCK0)
-    confirmed_score: float = 0.0          # 0~1 (확정 비율 = 확정건수/전체)
-    fact_check: str = ""                  # 팩트체크 상태 한 문장(코드 판정)
     # 안전장치
     hard_block: int = 0                   # 0/1 (매수 즉시 차단)
     hard_block_reason: str | None = None
     # 근거 · 전문 요약
-    top_evidence: list[str] = Field(default_factory=list)   # 근거가 된 헤드라인 목록
+    top_evidence: list[str | None] = Field(default_factory=list)  # 근거 헤드라인 정확히 3개(부족분 None)
     summary: str = ""                     # 뉴스 전문 3~4줄 요약(대표 기사)
     keywords: list[str] = Field(default_factory=list)       # 핵심 키워드 5개
     ref: str = ""                         # 대표 기사 원문 링크(공시와 달리 중복 아님)
@@ -172,27 +225,31 @@ class NewsBundle(BaseModel):
         peak = (f" [peak imp{self.peak_importance}·low-conf]"
                 if self.peak_importance > self.importance else "")
         lines = [head, (
-            f" News: {self.news_count} items (confirmed{self.news_confirmed}·"
-            f"rumor{self.news_rumor}) → {self.sentiment}({self.sentiment_score}) "
+            f" News: {self.news_count} items → {self.sentiment}({self.sentiment_score}) "
             f"imp{self.importance} trust{self.source_trust} grade{self.grade_score} "
             f"conf{self.confidence}{peak}")]
         if self.source or self.published_at:
             lines.append(f"       Source: {self.source} · published {self.published_at}")
+        if self.disclosure_ref:                      # 공식 공시로 뒷받침된 사건(사실성↑)
+            lines.append(f"       ✓ 공식공시 뒷받침({self.event_type}): {self.disclosure_ref}")
         if self.reason:
             lines.append(f'       Reason: "{self.reason}"')
-        if self.fact_check:
-            lines.append(f"       Fact-check: {self.fact_check}")
         if self.summary:
             lines.append(f"       Summary: {' '.join(self.summary.split())}")
         if self.keywords:
             lines.append(f"       Keywords: {', '.join(self.keywords)}")
         for ev in self.top_evidence:
-            lines.append(f'       Evidence: "{ev}"')
+            if ev:                                   # 부족분 None은 표기 생략
+                lines.append(f'       Evidence: "{ev}"')
         lines.append(
             f" Overall: hard_block={self.hard_block}"
             + (f" ({self.hard_block_reason})" if self.hard_block else "")
             + (f" · generated {self.collected_at}" if self.collected_at else ""))
         return "\n".join(lines)
+
+    def to_strategist_signal(self) -> dict:
+        """뉴스 압축 신호(dict). peak_importance 포함, trust_score로 개명 노출."""
+        return pack_news_signal(self.model_dump())
 
 
 # ── 빌더 ────────────────────────────────────────────────
@@ -224,6 +281,7 @@ def build_disclosure_bundle(ticker: str, trade_date: str,
     # 방향점수: 호재는 confidence(certainty_level)로 감쇠. 공시는 대개 High(0.9)라
     # 거의 안 눌리지만, 모호(Low)한 호재 공시는 방향을 덜 단정한다.
     b.sentiment_score = _senti_score(_sign(b.sentiment) * b.importance, b.confidence)
+    b.is_positive = b.sentiment_score > 0.5   # 호재 불리언 파생(리뷰 반영)
     b.risk_score = _n10(getattr(sig, "risk_score", 0))
     b.reason = getattr(sig, "reason", "") or ""
     b.summary = getattr(sig, "summary", "") or ""
@@ -270,9 +328,6 @@ def build_news_bundle(ticker: str, trade_date: str,
         return b
 
     b.has_signal = 1
-    confirmed = sum(1 for r in analyzed if r.signal.is_confirmed)
-    b.news_confirmed = confirmed
-    b.news_rumor = len(analyzed) - confirmed
     b.news_count = len(analyzed)
 
     # 기사별 신뢰도(가중치). confidence는 이 원본 가중치의 평균(저신뢰면 낮게).
@@ -304,6 +359,7 @@ def build_news_bundle(ticker: str, trade_date: str,
                   else sum(s * w for s, w in zip(signed, weights)) / tw)
     # 방향점수: 호재는 confidence로 감쇠(루머뿐이면 방향을 덜 단정), 악재는 유지
     b.sentiment_score = _senti_score(agg_signed, b.confidence)
+    b.is_positive = b.sentiment_score > 0.5   # 호재 불리언 파생(리뷰 반영)
     pos_w = sum(w for s, w in zip(signed, weights) if s > 0)
     neg_w = sum(w for s, w in zip(signed, weights) if s < 0)
     # 라벨은 최종 sentiment_score에서 파생 — 항상 같은 방향을 가리킨다(라벨↔점수 일관).
@@ -320,9 +376,6 @@ def build_news_bundle(ticker: str, trade_date: str,
     b.grade_score = round(sum(
         _GRADE_SCORE.get(getattr(r, "source_grade", None), 0.6) * w
         for r, w in zip(analyzed, weights)) / tw, 2)
-    b.confirmed_score = round(confirmed / b.news_count, 2)  # 확정 비율
-    b.fact_check = _fact_check_news(
-        confirmed, b.news_count, b.source_trust, b.grade_score)
 
     # 대표 신호·근거 선정: importance 만이 아니라 **신뢰가중(importance×confidence)**으로
     # — 시끄럽지만 저신뢰인 루머가 대표 이벤트/헤드라인이 되지 않도록(확정 위주).
@@ -340,7 +393,8 @@ def build_news_bundle(ticker: str, trade_date: str,
     _pub = getattr(rep.item, "published_at", None)
     b.published_at = _pub.isoformat() if _pub else ""
     b.ref = getattr(rep.item, "url", "") or ""
-    b.top_evidence = [
-        f"{(r.item.meta.get('source') or '').strip()}: {r.item.title[:60]}"
-        for r, _ in scored[:1]]
+    # 근거 헤드라인: 신뢰가중 상위 3개(명세 §06 "정확히 3개, 부족분 null").
+    ev = [f"{(r.item.meta.get('source') or '').strip()}: {r.item.title[:60]}"
+          for r, _ in scored[:3]]
+    b.top_evidence = (ev + [None, None, None])[:3]   # 고정 3칸, 부족분 None
     return b

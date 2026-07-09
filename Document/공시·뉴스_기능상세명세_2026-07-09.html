@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantinue 공시·뉴스 기능 상세 명세 (2026-07-09 최신)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f8fafc; --panel:#ffffff; --line:#e2e8f0; --line2:#f1f5f9;
+    --txt:#334155; --head:#0f172a; --dim:#64748b;
+    --green:#15803d; --green-d:#14532d; --green-bg:#f0fdf4;
+    --blue:#1d4ed8; --blue-d:#1e3a8a; --blue-bg:#eff6ff;
+    --amber:#b45309; --amber-d:#92400e; --amber-bg:#fffbeb;
+    --rose:#be123c; --rose-bg:#fff1f2;
+    --violet:#7c3aed; --violet-bg:#f5f3ff; --slate:#475569; --slate-bg:#f1f5f9;
+    --teal:#0f766e; --teal-bg:#ccfbf1;
+    --sidebar:290px;
+  }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0; font-family:"Noto Sans KR",system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--txt); line-height:1.72; letter-spacing:-.01em; font-size:15px; word-break:keep-all; overflow-wrap:break-word;}
+  a{color:var(--green); text-decoration:none} a:hover{text-decoration:underline}
+  .layout{display:flex; align-items:flex-start}
+  aside.sidebar{width:var(--sidebar); flex:0 0 var(--sidebar); position:sticky; top:0; height:100vh; overflow-y:auto; background:#fff; border-right:1px solid var(--line); padding:24px 16px;}
+  .sidebar .brand{display:flex; align-items:center; gap:10px; margin-bottom:4px}
+  .sidebar .brand .e{font-size:26px} .sidebar .brand b{font-size:17px; color:var(--head)}
+  .sidebar .sub{color:var(--dim); font-size:12px; margin:0 0 18px; line-height:1.5}
+  .sidebar nav a{display:block; color:var(--dim); font-size:13px; padding:6px 11px; border-radius:8px; margin:1px 0; border-left:2px solid transparent; transition:.12s;}
+  .sidebar nav a:hover{background:var(--green-bg); color:var(--green-d)}
+  .sidebar nav a.active{background:var(--green-bg); color:var(--green-d); border-left-color:var(--green); font-weight:700}
+  .sidebar nav .grp{font-size:11px; font-weight:800; color:var(--slate); text-transform:uppercase; letter-spacing:.1em; margin:14px 11px 4px}
+  .sidebar .foot{margin-top:20px; padding-top:14px; border-top:1px solid var(--line); color:var(--dim); font-size:11px; line-height:1.6}
+  main.content{flex:1 1 auto; min-width:0; max-width:1200px; margin:0 auto; padding:0 46px 120px}
+  .hero{padding:48px 10px 34px; border-bottom:1px solid var(--line); background:radial-gradient(ellipse 58% 50% at 78% -12%,rgba(13,148,136,.12),transparent),radial-gradient(ellipse 50% 44% at 10% 2%,rgba(8,145,178,.08),transparent)}
+  .hero h1{font-size:clamp(28px,5vw,42px); margin:16px 0 8px; font-weight:800; color:var(--head); letter-spacing:-.03em; line-height:1.2}
+  .hero h1 .grad{background:linear-gradient(100deg,#15803d,#0d9488 55%,#0891b2); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .hero .accent-bar{width:60px; height:4px; border-radius:4px; background:linear-gradient(90deg,#15803d,#0891b2); margin:2px 0 0}
+  .hero .tag{color:var(--dim); font-size:15.5px; margin:15px 0 0; max-width:840px; line-height:1.7}
+  .hero .tag b{color:var(--head)}
+  .hero .meta{margin-top:24px; display:flex; gap:11px 26px; flex-wrap:wrap; font-size:13.5px; color:var(--dim)}
+  .hero .meta b{color:var(--head); font-weight:700}
+  .badges{display:flex; gap:8px; flex-wrap:wrap}
+  .badge{background:var(--slate-bg); border:1px solid var(--line); padding:5px 12px; border-radius:999px; font-size:12.5px; color:var(--dim); font-weight:600}
+  section{scroll-margin-top:18px}
+  h2{font-size:22px; margin:56px 0 6px; font-weight:800; display:flex; align-items:center; gap:11px; color:var(--head)}
+  h2 .n{font-size:13px; color:#fff; background:var(--green); border-radius:8px; padding:3px 10px; font-weight:800; flex:none}
+  h2 .n.disc{background:var(--blue)} h2 .n.news{background:var(--teal)} h2 .n.core{background:var(--slate)} h2 .n.new{background:var(--violet)}
+  h3{font-size:16px; margin:26px 0 6px; color:var(--head); font-weight:700; border-left:3px solid var(--green); padding-left:10px}
+  .lead{color:var(--dim); font-size:14.5px; margin:4px 0 0}
+  p{margin:9px 0} ul,ol{margin:9px 0; padding-left:22px} li{margin:5px 0}
+  strong,b{color:var(--head)}
+  code{background:#f1f5f9; border:1px solid var(--line); padding:1px 6px; border-radius:5px; font-size:.86em; color:#9a3412; font-family:"SF Mono",Menlo,Consolas,monospace}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin:15px 0; box-shadow:0 1px 2px rgba(15,23,42,.03)}
+  .callout{border-radius:12px; padding:12px 15px; margin:13px 0; border:1px solid; font-size:14px}
+  .c-tip{background:var(--green-bg); border-color:#bbf7d0}
+  .c-info{background:var(--blue-bg); border-color:#bfdbfe}
+  .c-warn{background:var(--amber-bg); border-color:#fde68a}
+  .c-danger{background:var(--rose-bg); border-color:#fecdd3}
+  .callout b{color:var(--head)}
+  table{width:100%; border-collapse:collapse; margin:13px 0; font-size:12.8px; border:1px solid var(--line); border-radius:12px; overflow:hidden}
+  th,td{padding:8px 10px; text-align:left; border-bottom:1px solid var(--line2); vertical-align:top}
+  th{background:#f1f5f9; color:var(--head); font-weight:700}
+  tr:last-child td{border-bottom:none} tbody tr:nth-child(even){background:#fcfdfe}
+  pre{background:#0f172a; border-radius:12px; padding:15px 17px; overflow-x:auto; font-size:12.6px; line-height:1.6; margin:12px 0}
+  pre code{background:none; border:none; padding:0; color:#e2e8f0}
+  .j-key{color:#7dd3fc} .j-str{color:#86efac} .j-num{color:#fca5a5} .j-bool{color:#c4b5fd} .j-cm{color:#64748b}
+  hr{border:none; border-top:1px solid var(--line); margin:34px 0}
+  .step-meta{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 2px}
+  .pill{display:inline-block; padding:2px 10px; border-radius:999px; font-size:11.5px; font-weight:600; border:1px solid var(--line); background:#fff; color:var(--dim)}
+  .owner{display:inline-block; padding:1px 9px; border-radius:999px; font-size:11.5px; font-weight:700; background:var(--green-bg); color:var(--green-d); border:1px solid #bbf7d0}
+  .flow{background:#0f172a; border-radius:12px; padding:15px 17px; margin:12px 0; overflow-x:auto; color:#e2e8f0; font-size:12.5px; line-height:1.65; font-family:"SF Mono",Menlo,Consolas,monospace; white-space:pre}
+  .tagnew{display:inline-block; font-size:10px; font-weight:800; color:#fff; background:var(--violet); border-radius:5px; padding:1px 6px; vertical-align:middle; margin-left:4px}
+  .menu-btn{display:none}
+  @media(max-width:880px){
+    aside.sidebar{position:fixed; left:0; top:0; z-index:50; height:100vh; width:260px; transform:translateX(-100%); transition:transform .25s; box-shadow:0 0 40px rgba(15,23,42,.18);}
+    body.nav-open aside.sidebar{transform:translateX(0)}
+    main.content{padding:0 16px 100px}
+    .menu-btn{display:flex; align-items:center; gap:8px; position:fixed; top:14px; left:14px; z-index:40; background:var(--panel); border:1px solid var(--line); color:var(--head); border-radius:10px; padding:9px 14px; font-size:14px; cursor:pointer; box-shadow:0 2px 8px rgba(15,23,42,.08);}
+    .scrim{display:none; position:fixed; inset:0; background:rgba(15,23,42,.35); z-index:45}
+    body.nav-open .scrim{display:block}
+    .hero{padding-top:58px}
+  }
+</style>
+</head>
+<body>
+<button class="menu-btn" onclick="document.body.classList.toggle('nav-open')">☰ 목차</button>
+<div class="scrim" onclick="document.body.classList.remove('nav-open')"></div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand"><span class="e">📘</span><b>Quantinue</b></div>
+    <p class="sub">공시·뉴스 기능 상세 명세<br>2026-07-09 최신 확정본</p>
+    <nav id="toc">
+      <a href="#overview">00 · 개요 · 저장≠전달</a>
+      <a href="#pipeline">01 · 파이프라인 흐름</a>
+      <div class="grp">🗄️ 저장 스키마</div>
+      <a href="#tb-disc">02 · tb_disclosure (19+_id)</a>
+      <a href="#tb-news">03 · tb_news (26+_id)</a>
+      <div class="grp">📤 전달 계약</div>
+      <a href="#strategist">04 · Strategist 압축 신호</a>
+      <div class="grp">🧮 산출 로직</div>
+      <a href="#logic">05 · 점수 산출·집계</a>
+      <a href="#disc-ref">06 · disclosure_ref 매칭</a>
+      <div class="grp">🆕 변경</div>
+      <a href="#changes">07 · 2026-07-09 리뷰 반영</a>
+      <a href="#run">08 · 실행·파일</a>
+    </nav>
+    <div class="foot">📘 코드 1:1 (analysis_bundle · db · llm_client) · 담당 정창욱<br>팀 파이프라인 05 공시 / 06 뉴스</div>
+  </aside>
+
+  <main class="content">
+  <div class="hero">
+    <div class="badges">
+      <span class="badge" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;font-weight:700">🌊 팀 여름이었다</span>
+      <span class="badge">정보분석 (05·06)</span>
+      <span class="badge">담당 정창욱</span>
+      <span class="badge" style="background:#f5f3ff;border-color:#ddd6fe;color:#7c3aed;font-weight:700">🆕 리뷰 반영 완료</span>
+      <span class="badge">2026-07-09 확정</span>
+    </div>
+    <h1>공시·뉴스 <span class="grad">기능 상세 명세</span><br>저장 스키마 · 전달 계약 · 산출 로직</h1>
+    <div class="accent-bar"></div>
+    <p class="tag">공시·뉴스 정보분석 파트의 <b>현재 확정 상태</b>를 실제 코드 그대로 정리한 명세. 핵심은 <b>저장(tb_disclosure·tb_news, 상세 컬럼) ≠ 전달(Strategist 압축 신호)</b>의 분리. 2026-07-09 리뷰 반영(단일 <code>_id</code> PK · <code>is_positive</code> · <code>temperature=0</code> · KST 표시 · <code>disclosure_ref</code> 유지 · 압축 계약)까지 포함.</p>
+    <div class="meta">
+      <span>저장 <b>tb_disclosure 19 · tb_news 26 (+_id)</b></span>
+      <span>전달 <b>공시 7 · 뉴스 10 필드 압축</b></span>
+      <span>LLM <b>temperature=0 · Pydantic AI</b></span>
+    </div>
+  </div>
+
+  <!-- 00 개요 -->
+  <section id="overview">
+    <h2><span class="n core">00</span> 개요 — 저장과 전달의 분리</h2>
+    <div class="card">
+      <div class="step-meta"><span class="pill">📥 스크리닝 50 티커</span><span class="pill">🗄️ tb_disclosure · tb_news</span><span class="pill">📤 Strategist 압축 신호</span><span class="owner">담당: 정창욱</span></div>
+      <p>정보분석 파트는 50개 종목의 공시·뉴스를 분석해 <b>두 층으로</b> 내보낸다.</p>
+      <ul>
+        <li><b>저장층</b> — <code>tb_disclosure</code>(19)·<code>tb_news</code>(26)에 상세 컬럼을 시계열 append. 감사·백테스트·디버깅·근거 추적용.</li>
+        <li><b>전달층</b> — Strategist에겐 판단에 필요한 <b>압축 신호(공시 7·뉴스 10 필드)</b>만 JSON으로. 인터페이스 안정성·프롬프트 토큰 절감.</li>
+      </ul>
+      <div class="flow">50 티커
+  │
+  ├─ 공시(1h) ─▶ 수집·분석·집계 ─▶ <span class="j-key">tb_disclosure</span>(상세19) ─▶ latest_disclosure_signal() ─▶ <span class="j-str">공시 압축 7필드</span>
+  └─ 뉴스(5m) ─▶ 수집·분석·집계 ─▶ <span class="j-key">tb_news</span>(상세26)       ─▶ latest_news_signal()       ─▶ <span class="j-str">뉴스 압축 10필드</span>
+                                                                          │
+                                                        <span class="j-cm">공시·뉴스는 통합하지 않고 각자 주기로 별개 전달 → 07 Strategist</span></div>
+      <div class="callout c-info">🛠 <b>스택</b> — Python · Pydantic · <b>Pydantic AI</b>(구조화 출력 강제, <b>temperature=0</b> 결정론). LLM 코드기본 <code>anthropic:claude-haiku-4-5</code> / 운영 <code>.env</code> <code>openai:gpt-4o-mini</code>. SEC·RSS·Yahoo 전부 키 불필요. DB=SQLite. 시각은 <b>UTC 저장 + KST 표시</b>.</div>
+    </div>
+  </section>
+
+  <!-- 01 파이프라인 -->
+  <section id="pipeline">
+    <h2><span class="n core">01</span> 파이프라인 흐름</h2>
+    <div class="card">
+      <h3>공시 (1시간)</h3>
+      <div class="flow">수집(8-K Item·10-Q/K XBRL·Form4 XML) ─▶ Form/Item 라우팅 ─▶ 하드리스크 스캔
+  ─▶ LLM 분석(DisclosureSignal 0~10) ─▶ 매매권한 종합(가장 보수적) ─▶ 집계(종목당 1행)
+  ─▶ tb_disclosure append (신호 없어도 has_signal=0 빈 행)</div>
+      <h3>뉴스 (5분)</h3>
+      <div class="flow">수집(Google News RSS) ─▶ 출처 3등급·키워드 사전필터(LLM 전 drop)
+  ─▶ LLM 분석(NewsSignal) ─▶ 기사별 신뢰가중 집계 + 대표기사 선정
+  ─▶ disclosure_ref 매칭(오늘 공시와 교차확인) ─▶ tb_news append</div>
+      <div class="callout c-tip">🕐 <b>이중주기</b> — 틱은 뉴스 5분으로 돌고 공시는 1시간 배수마다. 매 사이클 50종목 각각 1행 append(덮어쓰기 ❌·시계열 누적). Strategist는 종목별 <b>최신 행</b>을 읽는다. 메타레벨 증분(accession 기준)으로 새 공시/기사만 LLM 호출.</div>
+    </div>
+  </section>
+
+  <!-- 02 tb_disclosure -->
+  <section id="tb-disc">
+    <h2><span class="n disc">02</span> tb_disclosure — 저장 스키마 (19 + _id)</h2>
+    <div class="card">
+      <div class="step-meta"><span class="pill">PK: _id (AUTOINCREMENT)</span><span class="pill">UNIQUE: (ticker, collected_at)</span><span class="pill">점수 0~1</span></div>
+      <table>
+        <thead><tr><th>#</th><th>컬럼</th><th>타입</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td>—</td><td><code>_id</code> 🔑</td><td>INT AUTO</td><td>단일 기본키(리뷰 반영)<span class="tagnew">NEW</span></td></tr>
+          <tr><td>1</td><td><code>ticker</code></td><td>TEXT</td><td>종목 심볼 · UNIQUE 키</td></tr>
+          <tr><td>2</td><td><code>collected_at</code></td><td>TS</td><td>스냅샷 생성 시각(UTC) · UNIQUE 키</td></tr>
+          <tr><td>3</td><td><code>trade_date</code></td><td>DATE</td><td>분석 기준일(FK→tb_daily_pick)</td></tr>
+          <tr><td>4</td><td><code>has_signal</code></td><td>0/1</td><td>공시 있음(1)/없음(0, 뒤 컬럼 null)</td></tr>
+          <tr><td>5</td><td><code>filing_title</code></td><td>TEXT</td><td>대표 공시 제목</td></tr>
+          <tr><td>6</td><td><code>filing_no</code></td><td>TEXT</td><td>accession(원문 역추적 ID)</td></tr>
+          <tr><td>7</td><td><code>filed_at</code></td><td>TS</td><td>제출 시각(look-ahead 방지)</td></tr>
+          <tr><td>8</td><td><code>event_type</code></td><td>TEXT(12종)</td><td>사건 종류(통일 온톨로지)</td></tr>
+          <tr><td>9</td><td><code>sentiment</code></td><td>라벨</td><td>positive/negative/neutral/mixed</td></tr>
+          <tr><td>10</td><td><code>sentiment_score</code></td><td>0~1</td><td>0=강악재·0.5=중립·1=강호재</td></tr>
+          <tr style="background:#f5f3ff"><td>11</td><td><code>is_positive</code></td><td>0/1</td><td>sentiment_score&gt;0.5 불리언 파생<span class="tagnew">NEW</span></td></tr>
+          <tr><td>12</td><td><code>reason</code></td><td>TEXT</td><td>점수 근거 한 줄</td></tr>
+          <tr><td>13</td><td><code>importance</code></td><td>0~1</td><td>강도(방향 뺀 축)</td></tr>
+          <tr><td>14</td><td><code>risk_score</code></td><td>0~1</td><td>위험도(오늘 공시 최댓값 보존)</td></tr>
+          <tr><td>15</td><td><code>confidence</code></td><td>0~1</td><td>LLM 확신도(certainty 매핑)</td></tr>
+          <tr><td>16</td><td><code>hard_block</code> 🛡️</td><td>0/1</td><td>매수 즉시 차단</td></tr>
+          <tr><td>17</td><td><code>hard_block_reason</code></td><td>TEXT</td><td>차단 사유</td></tr>
+          <tr><td>18</td><td><code>summary</code></td><td>TEXT</td><td>공시 3~4줄 요약</td></tr>
+          <tr><td>19</td><td><code>keywords</code></td><td>TEXT[]</td><td>키워드 5개</td></tr>
+        </tbody>
+      </table>
+      <div class="callout c-info">🧩 종목당 오늘 공시를 <b>1행 집계</b>. 방향·메타는 대표 1건에서, <b>risk_score는 최댓값·hard_block은 OR</b>로 보존(치명 위험이 묻히지 않게). 공시는 공식 문서라 별도 출처신뢰 컬럼 없음.</div>
+    </div>
+  </section>
+
+  <!-- 03 tb_news -->
+  <section id="tb-news">
+    <h2><span class="n news">03</span> tb_news — 저장 스키마 (26 + _id)</h2>
+    <div class="card">
+      <div class="step-meta"><span class="pill">PK: _id</span><span class="pill">UNIQUE: (ticker, collected_at)</span><span class="pill">신뢰가중 집계</span></div>
+      <table>
+        <thead><tr><th>#</th><th>컬럼</th><th>타입</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td>—</td><td><code>_id</code> 🔑</td><td>INT AUTO</td><td>단일 기본키<span class="tagnew">NEW</span></td></tr>
+          <tr><td>1~4</td><td><code>ticker·collected_at·trade_date·has_signal</code></td><td>—</td><td>공시와 동일(메타·신호유무)</td></tr>
+          <tr><td>5</td><td><code>news_title</code></td><td>TEXT</td><td>대표 기사 제목</td></tr>
+          <tr><td>6</td><td><code>source</code></td><td>TEXT</td><td>대표 기사 언론사</td></tr>
+          <tr><td>7</td><td><code>published_at</code></td><td>TS</td><td>대표 기사 발행 시각</td></tr>
+          <tr><td>8</td><td><code>news_count</code></td><td>INT</td><td>분석 기사 수</td></tr>
+          <tr><td>9</td><td><code>event_type</code></td><td>TEXT(12종)</td><td>대표 사건 종류</td></tr>
+          <tr style="background:#fffdf0"><td>10</td><td><code>disclosure_ref</code></td><td>TEXT</td><td>뉴스 event_type↔오늘 공시 filing_no 매칭(없으면 null) · <b>유지 확정</b></td></tr>
+          <tr><td>11</td><td><code>sentiment</code></td><td>라벨</td><td>점수에서 파생</td></tr>
+          <tr><td>12</td><td><code>sentiment_score</code></td><td>0~1</td><td>신뢰가중 방향(강악재 1건이면 보수)</td></tr>
+          <tr style="background:#f5f3ff"><td>13</td><td><code>is_positive</code></td><td>0/1</td><td>sentiment_score&gt;0.5<span class="tagnew">NEW</span></td></tr>
+          <tr><td>14</td><td><code>reason</code></td><td>TEXT</td><td>대표 기사 근거</td></tr>
+          <tr><td>15</td><td><code>importance</code></td><td>0~1</td><td>신뢰가중 평균 강도</td></tr>
+          <tr><td>16</td><td><code>peak_importance</code></td><td>0~1</td><td>신뢰검증 기사 중 최댓값(강신호 보존)</td></tr>
+          <tr><td>17</td><td><code>risk_score</code></td><td>0~1</td><td>신뢰가중 위험도</td></tr>
+          <tr><td>18</td><td><code>confidence</code></td><td>0~1</td><td>기사별 신뢰 평균</td></tr>
+          <tr><td>19</td><td><code>source_trust</code></td><td>0~1</td><td>출처 신뢰(LLM·해석·사후)</td></tr>
+          <tr><td>20</td><td><code>grade_score</code></td><td>0~1</td><td>출처 등급(코드·도메인·사전)</td></tr>
+          <tr><td>21</td><td><code>hard_block</code> 🛡️</td><td>0/1</td><td>매수 즉시 차단</td></tr>
+          <tr><td>22</td><td><code>hard_block_reason</code></td><td>TEXT</td><td>차단 사유</td></tr>
+          <tr><td>23</td><td><code>top_evidence</code></td><td>TEXT[]3</td><td>근거 헤드라인 3개(고정)</td></tr>
+          <tr><td>24</td><td><code>summary</code></td><td>TEXT</td><td>뉴스 요약</td></tr>
+          <tr><td>25</td><td><code>keywords</code></td><td>TEXT[]</td><td>키워드 5개</td></tr>
+          <tr><td>26</td><td><code>ref</code></td><td>TEXT</td><td>대표 기사 링크</td></tr>
+        </tbody>
+      </table>
+      <div class="callout c-warn">⚖️ <b>source_trust와 grade_score는 별개 축으로 유지</b> — grade=코드·도메인·<b>사전</b> 관문 / trust=LLM·내용·<b>사후</b> 판단. 이중 방어 + 감사 가능성 때문에 하나로 합치지 않는다.</div>
+    </div>
+  </section>
+
+  <!-- 04 Strategist 압축 -->
+  <section id="strategist">
+    <h2><span class="n new">04</span> Strategist 압축 신호 — 전달 계약 <span class="tagnew">NEW</span></h2>
+    <div class="card hl" style="border-color:var(--violet)">
+      <p>저장 상세(19/26)에서 <b>판단에 필요한 핵심만</b> 뽑아 JSON으로 전달. 공시·뉴스는 <b>통합하지 않고 각자</b>(1h/5m 주기) 전달한다. 명칭은 <code>_score</code> 접미로 통일(전달 계약에서만 개명, 내부 컬럼은 유지).</p>
+
+      <h3>공시 압축 (7필드) — <code>latest_disclosure_signal(ticker)</code></h3>
+      <pre><code>{
+  <span class="j-key">"has_signal"</span>: <span class="j-bool">true</span>,
+  <span class="j-key">"event_type"</span>: <span class="j-str">"earnings"</span>,
+  <span class="j-key">"importance_score"</span>: <span class="j-num">0.82</span>,   <span class="j-cm">// ← importance 개명</span>
+  <span class="j-key">"sentiment_score"</span>: <span class="j-num">0.76</span>,
+  <span class="j-key">"risk_score"</span>: <span class="j-num">0.18</span>,
+  <span class="j-key">"hard_block"</span>: <span class="j-bool">false</span>,
+  <span class="j-key">"summary"</span>: <span class="j-str">"공식 실적 공시에서 매출과 이익 개선이 확인됨."</span>
+}</code></pre>
+
+      <h3>뉴스 압축 (10필드) — <code>latest_news_signal(ticker)</code></h3>
+      <pre><code>{
+  <span class="j-key">"has_signal"</span>: <span class="j-bool">true</span>,
+  <span class="j-key">"article_count"</span>: <span class="j-num">8</span>,           <span class="j-cm">// news_count</span>
+  <span class="j-key">"event_type"</span>: <span class="j-str">"earnings"</span>,
+  <span class="j-key">"importance_score"</span>: <span class="j-num">0.71</span>,     <span class="j-cm">// 신뢰가중 평균</span>
+  <span class="j-key">"peak_importance"</span>: <span class="j-num">0.75</span>,      <span class="j-cm">// ← 추가: 강신호 희석 방지</span>
+  <span class="j-key">"sentiment_score"</span>: <span class="j-num">0.68</span>,
+  <span class="j-key">"risk_score"</span>: <span class="j-num">0.29</span>,
+  <span class="j-key">"trust_score"</span>: <span class="j-num">0.83</span>,         <span class="j-cm">// ← source_trust 개명</span>
+  <span class="j-key">"hard_block"</span>: <span class="j-bool">false</span>,
+  <span class="j-key">"summary"</span>: <span class="j-str">"실적 전망 상향과 긍정적 애널리스트 코멘트가 다수 확인됨."</span>
+}</code></pre>
+
+      <h3>매핑 · 규칙</h3>
+      <table>
+        <thead><tr><th>압축 필드</th><th>← 저장 컬럼</th><th>규칙</th></tr></thead>
+        <tbody>
+          <tr><td><code>importance_score</code></td><td><code>importance</code></td><td>개명(전달 계약만)</td></tr>
+          <tr><td><code>trust_score</code>(뉴스)</td><td><code>source_trust</code></td><td>개명</td></tr>
+          <tr><td><code>peak_importance</code>(뉴스)</td><td><code>peak_importance</code></td><td>강신호 보존용 포함</td></tr>
+          <tr><td><code>article_count</code>(뉴스)</td><td><code>news_count</code></td><td>확산도</td></tr>
+          <tr><td><code>summary</code></td><td><code>summary</code>(+<code>hard_block_reason</code>)</td><td><b>hard_block이면 사유를 앞에 삽입</b></td></tr>
+        </tbody>
+      </table>
+      <div class="callout c-danger">🛡️ <b>hard_block=true</b>면 <code>summary</code> 앞에 <code>[차단: {사유}]</code>가 자동으로 붙는다. 예: <code>"[차단: going concern] 상폐 위험 공시"</code>. Strategist가 즉시 보류하면서 <b>왜 막혔는지</b>를 바로 본다.</div>
+      <div class="callout c-tip">💤 <b>신호 없음</b> → <code>{"has_signal": false, "hard_block": false}</code>만 반환(점수 필드는 null 대신 <b>생략</b>). 0.00은 '강한 악재'로 오인될 수 있어 넣지 않는다.</div>
+    </div>
+  </section>
+
+  <!-- 05 산출 로직 -->
+  <section id="logic">
+    <h2><span class="n core">05</span> 점수 산출 · 집계 로직</h2>
+    <div class="card">
+      <h3>정규화 · 방향점수</h3>
+      <div class="flow">importance/risk = _n10(v) = round(clip(v,0,10)/10, 2)      <span class="j-cm"># LLM 0~10 → DB 0~1</span>
+confidence = {High:0.9, Medium:0.6, Low:0.3}[certainty]
+sentiment_score = 0.5 + 0.5 × signed   (호재만 confidence로 감쇠, 악재 유지)
+is_positive = sentiment_score > 0.5</div>
+      <h3>뉴스 신뢰가중 집계</h3>
+      <div class="flow">weight = 확신(certainty) × 확정(1.0/0.5) × source_trust    <span class="j-cm"># 믿을수록 무겁게</span>
+importance     = Σ(강도 × weight) / Σweight               <span class="j-cm"># 신뢰가중 평균</span>
+peak_importance= max(importance, 신뢰검증 기사 강도들)      <span class="j-cm"># 강신호 보존</span>
+risk_score     = Σ(위험 × weight) / Σweight (+ 최댓값 성격 보존)
+sentiment_score= 강악재(≤−0.7) 1건이면 최솟값, 아니면 가중평균</div>
+      <div class="callout c-info">📐 <b>왜 신뢰가중?</b> 단순 평균이면 저신뢰 펌프 기사 여러 건이 고신뢰 1건을 눌러 왜곡된다. 무게(weight)로 <b>믿을 만한 기사에 힘을 실어</b> 이를 막는다. 상세 산출·예시는 <code>컬럼값_산출근거_데이터계보.html</code>·<code>공시·뉴스_컬럼구성_도식.html</code> 참조.</div>
+    </div>
+  </section>
+
+  <!-- 06 disclosure_ref -->
+  <section id="disc-ref">
+    <h2><span class="n news">06</span> disclosure_ref — 뉴스↔공시 교차확인 (유지 확정)</h2>
+    <div class="card">
+      <p>삭제한 루머/팩트 이진판별 대신 <b>공식 문서 존재 여부</b>로 뉴스 사실성을 보강한다. 뉴스 대표 <code>event_type</code>과 <b>같은 종목 오늘 공시</b>가 매칭되면 그 <code>filing_no</code>, 없으면 <code>null</code>.</p>
+      <div class="flow">disclosure_ref_for(ticker, event_type):
+  if event_type in (None, "other"): return None        <span class="j-cm"># 광범위 오매칭 방지</span>
+  후보 = 오늘 같은 종목 공시 중 event_type 일치 & accession 있음
+  return 후보 중 importance 최대 1건의 filing_no        <span class="j-cm"># 없으면 None</span></div>
+      <ul>
+        <li><b>설계</b>: accumulator(오늘 프로세스 메모리) 기반 · event_type 일치만 · tie는 importance 최대.</li>
+        <li><b>순수성</b>: <code>build_news_bundle</code>은 순수 함수로 유지하고 매칭은 스케줄러에서 주입(<code>has_signal</code>일 때만).</li>
+        <li><b>한계</b>: 재시작 직후엔 오늘 공시 누적이 비어 잠깐 매칭이 빌 수 있음 → 다음 공시 틱 이후 최신 행에 채워짐.</li>
+      </ul>
+      <div class="callout c-tip">✅ 이 기능은 팀 최최종 명세 #10 신설안을 구현한 것으로, <b>유지 확정</b>(제거하지 않음). 뉴스 "실적 호재"에 같은 날 실적 8-K가 매칭되면 → "소문 아니라 공식 확인됨" 신호로 Strategist에 전달.</div>
+    </div>
+  </section>
+
+  <!-- 07 변경 -->
+  <section id="changes">
+    <h2><span class="n new">07</span> 2026-07-09 리뷰 반영 변경사항</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>항목</th><th>Before</th><th>After</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td><b>기본키</b></td><td>복합 PK (ticker, collected_at)</td><td><b>단일 <code>_id</code> PK</b> + (ticker, collected_at) UNIQUE 병행</td><td>행 고유 식별자 · 조인 용이</td></tr>
+          <tr><td><b><code>is_positive</code></b></td><td>없음</td><td>sentiment_score&gt;0.5 <b>불리언 컬럼 신설</b></td><td>호재 여부 빠른 필터(sentiment_score는 그대로 유지)</td></tr>
+          <tr><td><b>LLM 온도</b></td><td>미설정(기본값)</td><td><b>temperature=0</b>(env LLM_TEMPERATURE 조절)</td><td>같은 입력→같은 출력(재현성·백테스트)</td></tr>
+          <tr><td><b>시각</b></td><td>UTC 저장</td><td>UTC 저장 <b>유지</b> + <code>to_kst()</code> 표시 헬퍼</td><td>look-ahead·미국장 정합 유지, 표시만 KST</td></tr>
+          <tr style="background:#fffdf0"><td><b><code>disclosure_ref</code></b></td><td>(md 초안=2차 보류 제안)</td><td><b>유지 확정</b></td><td>뉴스↔공시 교차확인은 사실성 보강에 유효</td></tr>
+          <tr style="background:#f5f3ff"><td><b>전달 계약</b></td><td>DB 전체 행을 Strategist가 읽음</td><td><b>압축 신호(공시7·뉴스10) 분리</b> · <code>latest_*_signal()</code></td><td>인터페이스 안정성·토큰 절감·강신호(peak) 보존</td></tr>
+        </tbody>
+      </table>
+      <div class="callout c-warn">📌 <b>명칭 통일 범위</b> — <code>importance→importance_score</code>·<code>source_trust→trust_score</code> 개명은 <b>전달 계약(압축 신호)에서만</b>. 내부 DB 컬럼·LLM 스키마는 그대로 둬 파급을 최소화했다.</div>
+      <div class="callout c-info">🔎 <b>미해결(팀 확인 필요)</b> — 팀 최최종 명세와 별도 md 초안이 <code>disclosure_ref</code>·event_type 목록·컬럼 수에서 상충. <b>최최종 명세를 최신 기준</b>으로 하되, event_type 통일 12종·감사 축(trust/grade) 분리는 유지하는 방향으로 팀 조율 필요.</div>
+    </div>
+  </section>
+
+  <!-- 08 실행 -->
+  <section id="run">
+    <h2><span class="n core">08</span> 실행 · 주요 파일</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>레이어</th><th>파일 · 함수</th></tr></thead>
+        <tbody>
+          <tr><td>집계·계약</td><td><code>app/common/analysis_bundle.py</code> — DisclosureBundle/NewsBundle · <code>to_strategist_signal()</code> · pack_*_signal</td></tr>
+          <tr><td>저장·전달</td><td><code>app/storage/db.py</code> — tb_disclosure/tb_news DDL · <code>latest_disclosure_signal</code>/<code>latest_news_signal</code> · <code>to_kst</code></td></tr>
+          <tr><td>LLM</td><td><code>app/common/llm_client.py</code> — build_agent(temperature=0)</td></tr>
+          <tr><td>스케줄러</td><td><code>app/scheduler/</code> — run_cycle/run_forever · BundleAccumulator(disclosure_ref 주입)</td></tr>
+          <tr><td>파이프라인</td><td><code>app/pipeline.py</code>(공시) · <code>app/news_pipeline.py</code>(뉴스)</td></tr>
+          <tr><td>테스트</td><td><code>tests/</code> — test_disclosure_ref · test_schema_review · test_strategist_signal</td></tr>
+        </tbody>
+      </table>
+      <div class="callout c-tip">🔗 <b>관련 문서</b> — 파이프라인 전 범위: <code>정보분석_공시·뉴스_파이프라인_상세명세.html</code> · 컬럼 산출 계보: <code>컬럼값_산출근거_데이터계보.html</code> · 시각 도식: <code>공시·뉴스_컬럼구성_도식.html</code>. 본 문서는 <b>2026-07-09 최신 확정 상태</b> 기준.</div>
+    </div>
+    <hr>
+    <p style="text-align:center;color:var(--dim);font-size:13px">Quantinue · 공시·뉴스 기능 상세 명세 · 2026-07-09 확정 · 담당 정창욱 📘</p>
+  </section>
+  </main>
+</div>
+<script>
+  const links = [...document.querySelectorAll('#toc a')];
+  const map = {}; links.forEach(a => { const id = a.getAttribute('href').slice(1); const s = document.getElementById(id); if (s) map[id] = { a, s }; });
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { links.forEach(l => l.classList.remove('active')); const m = map[e.target.id]; if (m) m.a.classList.add('active'); } });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  Object.values(map).forEach(m => obs.observe(m.s));
+</script>
+</body></html>
