@@ -69,12 +69,12 @@
 <div class="toc">
   <a href="#c0"><span class="num">0.</span>공통 예시 데이터 & 기초 상수</a>
   <a href="#c1"><span class="num">1.</span>기초 함수 — _n10 · _news_conf · _senti_score</a>
-  <a href="#c2"><span class="num">2.</span>confidence — 무게의 단순평균</a>
-  <a href="#c3"><span class="num">3.</span>importance — 강도의 가중평균</a>
-  <a href="#c4"><span class="num">4.</span>peak_importance — 신뢰기사 최댓값</a>
+  <a href="#c2"><span class="num">2.</span>confidence_score — 무게의 단순평균</a>
+  <a href="#c3"><span class="num">3.</span>importance_score — 강도의 가중평균</a>
+  <a href="#c4"><span class="num">4.</span>peak_importance_score — 신뢰기사 최댓값</a>
   <a href="#c5"><span class="num">5.</span>sentiment_score — 방향 집계 + 매핑</a>
   <a href="#c6"><span class="num">6.</span>risk_score — 위험의 가중평균</a>
-  <a href="#c7"><span class="num">7.</span>source_trust — 매체신뢰의 가중평균</a>
+  <a href="#c7"><span class="num">7.</span>trust_score — 매체신뢰의 가중평균</a>
   <a href="#c8"><span class="num">8.</span>grade_score — 도메인 등급의 가중평균</a>
   <a href="#c9"><span class="num">9.</span>전체 워크드 예제 — 3기사 → 결과</a>
   <a href="#c10"><span class="num">10.</span>계산방식 요약 & 코드 위치</a>
@@ -100,7 +100,7 @@
 <pre class="fx">결과 = (값을 0~10 사이로 자름) ÷ 10, round(2)
 <span class="c"># 원 코드: round(clamp(v,0,10)/10, 2)</span></pre>
 <div class="calc">7 → <b>0.7</b> · 5 → <b>0.5</b> · 9 → <b>0.9</b> · 13 → 1.0(잘림) · -2 → 0.0(잘림)</div>
-<p class="muted">LLM은 0~10으로 답하고, 우리는 모든 점수를 0~1로 통일합니다. importance·risk가 이걸 통과해요.</p>
+<p class="muted">LLM은 0~10으로 답하고, 우리는 모든 점수를 0~1로 통일합니다. importance_score·risk_score가 이걸 통과해요.</p>
 
 <h3>1-2. <code>_news_conf</code> — 기사 한 건의 무게(가중치) <span class="badge base">기초</span></h3>
 <p>모든 집계에서 “믿을수록 크게”의 <b>무게</b>로 쓰입니다. 세 요소의 곱이에요.</p>
@@ -117,40 +117,40 @@ A3 = 0.3 × 0.5 × 0.3 = <b>0.045</b>   ← 소문·저신뢰라 무게 급감
 
 <h3>1-3. <code>_senti_score</code> — 방향(-1~+1)을 0~1로 <span class="badge base">기초</span></h3>
 <pre class="fx">방향강도 = clamp(입력, -1, +1)
-<span class="p">if</span> 방향강도 &gt; 0:  방향강도 ×= confidence      <span class="c"># 호재만 감쇠</span>
+<span class="p">if</span> 방향강도 &gt; 0:  방향강도 ×= confidence_score      <span class="c"># 호재만 감쇠</span>
 결과 = 0.5 + 0.5 × 방향강도                    <span class="c"># 악재는 감쇠 없음</span></pre>
 <div class="calc">눈금:  -1 → 0.0(극악재)  ·  0 → 0.5(중립)  ·  +1 → 1.0(극호재)
 악재 예: 방향강도 -0.8 → 0.5 + 0.5×(-0.8) = <b>0.1</b>  (감쇠 없이 또렷)</div>
-<div class="why"><b>비대칭 감쇠.</b> 호재만 confidence로 눌러 근거 약한 낙관을 덜 단정하고, 악재(경고)는 흐리지 않습니다 — “가장 보수적 채택”.</div>
+<div class="why"><b>비대칭 감쇠.</b> 호재만 confidence_score로 눌러 근거 약한 낙관을 덜 단정하고, 악재(경고)는 흐리지 않습니다 — “가장 보수적 채택”.</div>
 
 <!-- ═══ 2 ═══ -->
-<h2 id="c2"><span class="n">2.</span>confidence — 무게의 <span style="color:var(--navy)">단순평균</span> <span style="font-size:14px">(÷n)</span></h2>
-<pre class="fx">confidence = Σ(무게) ÷ 기사 수(n)      <span class="c"># raw_weights 사용(폴백 이전)</span></pre>
+<h2 id="c2"><span class="n">2.</span>confidence_score — 무게의 <span style="color:var(--navy)">단순평균</span> <span style="font-size:14px">(÷n)</span></h2>
+<pre class="fx">confidence_score = Σ(무게) ÷ 기사 수(n)      <span class="c"># raw_weights 사용(폴백 이전)</span></pre>
 <table class="sym"><tr><td>대상</td><td>기사별 무게 <code>_news_conf</code> 그 자체</td></tr>
 <tr><td>분모</td><td><b>n(기사 수)</b> — tw 아님!</td></tr></table>
-<div class="calc">confidence = (0.81 + 0.48 + 0.045) ÷ <b>3</b> = 1.335 ÷ 3 = <b>0.45</b></div>
-<div class="why green"><b>왜 단순평균인가.</b> 저신뢰 기사(A3)가 <b>한 표를 온전히 행사해 confidence를 끌어내리게</b> 하려고요.
-가중평균이면 A3가 무시돼 “근거 얇음”이 사라집니다. importance(가중)와 <b>정반대 의도</b>예요.</div>
-<div class="why amber"><b>raw_weights 사용.</b> 다른 지표는 “무게 전부 0이면 등가중 폴백”하지만, confidence는 <b>폴백 이전</b> 원본으로 계산 → 전부 무신뢰면 정직하게 0 근처로 낮게 나옵니다.</div>
-<p class="muted">되먹임: confidence는 §5의 <code>_senti_score</code> 호재 감쇠에 다시 들어가 “약한 근거의 낙관”을 억제합니다.</p>
+<div class="calc">confidence_score = (0.81 + 0.48 + 0.045) ÷ <b>3</b> = 1.335 ÷ 3 = <b>0.45</b></div>
+<div class="why green"><b>왜 단순평균인가.</b> 저신뢰 기사(A3)가 <b>한 표를 온전히 행사해 confidence_score를 끌어내리게</b> 하려고요.
+가중평균이면 A3가 무시돼 “근거 얇음”이 사라집니다. importance_score(가중)와 <b>정반대 의도</b>예요.</div>
+<div class="why amber"><b>raw_weights 사용.</b> 다른 지표는 “무게 전부 0이면 등가중 폴백”하지만, confidence_score는 <b>폴백 이전</b> 원본으로 계산 → 전부 무신뢰면 정직하게 0 근처로 낮게 나옵니다.</div>
+<p class="muted">되먹임: confidence_score는 §5의 <code>_senti_score</code> 호재 감쇠에 다시 들어가 “약한 근거의 낙관”을 억제합니다.</p>
 
 <!-- ═══ 3 ═══ -->
-<h2 id="c3"><span class="n">3.</span>importance — 강도의 <span style="color:var(--navy)">가중평균</span> <span class="badge avg" style="font-size:11px">Σ(값·w)/tw</span></h2>
-<pre class="fx">importance = Σ( _n10(강도) × 무게 ) ÷ tw        <span class="c"># 방향(부호) 없음</span></pre>
+<h2 id="c3"><span class="n">3.</span>importance_score — 강도의 <span style="color:var(--navy)">가중평균</span> <span class="badge avg" style="font-size:11px">Σ(값·w)/tw</span></h2>
+<pre class="fx">importance_score = Σ( _n10(강도) × 무게 ) ÷ tw        <span class="c"># 방향(부호) 없음</span></pre>
 <div class="calc">mags = [0.7, 0.5, 0.9]  (부호 없는 강도)
-importance = (0.7×0.81 + 0.5×0.48 + 0.9×0.045) ÷ 1.335
+importance_score = (0.7×0.81 + 0.5×0.48 + 0.9×0.045) ÷ 1.335
            = (0.567 + 0.24 + 0.0405) ÷ 1.335 = 0.8475 ÷ 1.335 = <b>0.63</b></div>
 <div class="why"><b>핵심 관찰.</b> A3는 강도 0.9로 제일 높지만 무게 0.045라 기여가 0.0405뿐 — 거의 무시됩니다.
 그냥 산술평균이면 (0.7+0.5+0.9)/3 = <b>0.70</b>인데, 신뢰가중은 <b>0.63</b>으로 정직하게 낮아요.</div>
-<div class="why green"><b>왜 부호(방향)를 안 넣나.</b> 방향을 곱해 평균내면 큰 호재+큰 악재가 <b>상쇄돼 0으로 붕괴</b>합니다. importance는 순수 “강도” 축이라 부호를 뺍니다(방향은 §5 담당).</div>
+<div class="why green"><b>왜 부호(방향)를 안 넣나.</b> 방향을 곱해 평균내면 큰 호재+큰 악재가 <b>상쇄돼 0으로 붕괴</b>합니다. importance_score는 순수 “강도” 축이라 부호를 뺍니다(방향은 §5 담당).</div>
 
 <!-- ═══ 4 ═══ -->
-<h2 id="c4"><span class="n">4.</span>peak_importance — 신뢰기사 중 <span style="color:var(--amber)">최댓값</span> <span class="badge max" style="font-size:11px">max</span></h2>
+<h2 id="c4"><span class="n">4.</span>peak_importance_score — 신뢰기사 중 <span style="color:var(--amber)">최댓값</span> <span class="badge max" style="font-size:11px">max</span></h2>
 <pre class="fx"><span class="p">def</span> _news_credible(기사):      <span class="c"># 셋 중 하나면 자격</span>
     <span class="p">return</span> 확정 <span class="p">or</span> 매체신뢰≥0.6 <span class="p">or</span> 등급==ALLOW
 
 cred_mags = [ 강도 for 기사 if _news_credible(기사) ]
-peak_importance = max( importance, *cred_mags )</pre>
+peak_importance_score = max( importance_score, *cred_mags )</pre>
 <table>
   <tr><th>기사</th><th>강도</th><th>신뢰검증?</th><th>peak 후보?</th></tr>
   <tr><td>A1</td><td>0.7</td><td>✅ 확정·ALLOW</td><td>포함</td></tr>
@@ -160,7 +160,7 @@ peak_importance = max( importance, *cred_mags )</pre>
 <div class="calc">cred_mags = [0.7, 0.5]        <span style="color:var(--sub)"># A3의 0.9 제외</span>
 peak = max(0.63, 0.7, 0.5) = <b>0.70</b></div>
 <div class="why amber"><b>왜 신뢰기사만.</b> 저신뢰 블로그가 강도만 9로 부풀린 기사가 <b>가짜 peak</b>를 세우는 걸 막습니다(2026-07-07 편향 수정 — 이전엔 <code>max(mags)</code>라 A3가 peak 0.9를 세웠음).</div>
-<div class="why green"><b>importance를 max에 넣는 이유.</b> ① <code>peak ≥ importance</code> 항상 성립 ② 신뢰기사가 없으면 peak = importance로 수렴(0 붕괴 방지). <code>peak = importance</code>면 “평균 이상 튀는 신뢰신호 없음”을 뜻합니다.</div>
+<div class="why green"><b>importance_score를 max에 넣는 이유.</b> ① <code>peak_importance_score ≥ importance_score</code> 항상 성립 ② 신뢰기사가 없으면 peak_importance_score = importance_score로 수렴(0 붕괴 방지). <code>peak_importance_score = importance_score</code>면 “평균 이상 튀는 신뢰신호 없음”을 뜻합니다.</div>
 
 <!-- ═══ 5 ═══ -->
 <h2 id="c5"><span class="n">5.</span>sentiment_score — 방향 <span style="color:var(--navy)">가중평균</span> + 매핑 (2층)</h2>
@@ -171,19 +171,18 @@ signed = _n10(강도) × 부호        <span class="c"># 부호: 호재+1/악재
 <span class="p">else</span>:
     agg = Σ(signed × 무게) ÷ tw    <span class="c"># 정상: 방향 가중평균</span>
 <span class="c"># 2층: 0~1 매핑 (호재 감쇠)</span>
-sentiment_score = _senti_score(agg, confidence)</pre>
+sentiment_score = _senti_score(agg, confidence_score)</pre>
 <div class="calc">signed = [+0.7, +0.5, +0.9]   (전부 호재)
 min(signed)=+0.5 &gt; -0.7  →  강악재 예외 <b>미발동</b>, 가중평균 사용
 agg = (0.7×0.81 + 0.5×0.48 + 0.9×0.045) ÷ 1.335 = <b>0.635</b>
 _senti_score(0.635, conf 0.45): 호재라 ×0.45 → 0.286 → 0.5 + 0.5×0.286 = <b>0.64</b></div>
 <div class="why amber"><b>강한 악재 우선.</b> 가장 나쁜 기사가 -0.7 이하로 아주 나쁘면 <b>평균 대신 그 최악값</b>을 채택 — 치명적 경고가 호재에 물타기되지 않게(보수 장치).</div>
-<div class="why"><b>importance와 다른 점.</b> 이 예제에선 agg(0.635)≈importance(0.63)로 우연히 비슷하지만(전부 호재라 signed=mags), 개념은 다름: importance는 <b>부호 없는</b> mags를, sentiment는 <b>부호 있는</b> signed를 쓰고 매핑·감쇠까지 합니다.</div>
-<h4>파생: sentiment 라벨 & is_positive</h4>
-<pre class="fx">is_positive = sentiment_score &gt; 0.5
-sentiment = 강악재 → negative
+<div class="why"><b>importance_score와 다른 점.</b> 이 예제에선 agg(0.635)≈importance_score(0.63)로 우연히 비슷하지만(전부 호재라 signed=mags), 개념은 다름: importance_score는 <b>부호 없는</b> mags를, sentiment는 <b>부호 있는</b> signed를 쓰고 매핑·감쇠까지 합니다.</div>
+<h4>파생: sentiment 라벨</h4>
+<pre class="fx">sentiment = 강악재 → negative
           | 호재무게·악재무게 각 30%↑ → mixed
           | &gt;.5 positive / &lt;.5 negative / =.5 neutral</pre>
-<div class="calc">0.64 &gt; 0.5 → is_positive = <b>1</b>, 라벨 = <b>positive</b>  (호재무게만 있어 mixed 아님)</div>
+<div class="calc">0.64 &gt; 0.5 → 라벨 = <b>positive</b>  (호재무게만 있어 mixed 아님)</div>
 <p class="muted">라벨을 <b>최종 점수에서 파생</b>하므로 “점수 0.4인데 라벨 positive” 같은 모순이 없습니다.</p>
 
 <!-- ═══ 6 ═══ -->
@@ -191,14 +190,14 @@ sentiment = 강악재 → negative
 <pre class="fx">risk_score = Σ( _n10(위험) × 무게 ) ÷ tw      <span class="c"># 부호·감쇠 없음</span></pre>
 <div class="calc">위험 = [1, 0, 0] → _n10 → [0.1, 0, 0]
 risk_score = (0.1×0.81 + 0×0.48 + 0×0.045) ÷ 1.335 = 0.081 ÷ 1.335 = <b>0.06</b></div>
-<div class="why"><b>독립된 하방 축.</b> sentiment(방향)와 별개로 “얼마나 위험한가”만 잽니다. <b>호재인데 위험도 높을 수</b> 있어요(예: 인수 발표지만 규제 불확실). importance와 같은 순수 크기 축(부호·감쇠 없음).</div>
+<div class="why"><b>독립된 하방 축.</b> sentiment(방향)와 별개로 “얼마나 위험한가”만 잽니다. <b>호재인데 위험도 높을 수</b> 있어요(예: 인수 발표지만 규제 불확실). importance_score와 같은 순수 크기 축(부호·감쇠 없음).</div>
 <div class="why amber"><b><code>risk_score</code> ≠ <code>hard_block</code>.</b> risk_score는 0~1 참고 강도, hard_block은 권한 BLOCK 시 켜지는 0/1 즉시 차단. 별개 컬럼입니다.</div>
 
 <!-- ═══ 7 ═══ -->
-<h2 id="c7"><span class="n">7.</span>source_trust — 매체신뢰의 <span style="color:var(--navy)">가중평균</span> <span class="badge avg" style="font-size:11px">Σ(값·w)/tw</span></h2>
-<pre class="fx">source_trust = Σ( 기사별 매체신뢰(LLM) × 무게 ) ÷ tw</pre>
-<div class="calc">trust = [0.9, 0.8, 0.3]
-source_trust = (0.9×0.81 + 0.8×0.48 + 0.3×0.045) ÷ 1.335
+<h2 id="c7"><span class="n">7.</span>trust_score — 매체신뢰의 <span style="color:var(--navy)">가중평균</span> <span class="badge avg" style="font-size:11px">Σ(값·w)/tw</span></h2>
+<pre class="fx">trust_score = Σ( 기사별 source_trust(LLM) × 무게 ) ÷ tw</pre>
+<div class="calc">source_trust = [0.9, 0.8, 0.3]
+trust_score = (0.9×0.81 + 0.8×0.48 + 0.3×0.045) ÷ 1.335
              = (0.729 + 0.384 + 0.0135) ÷ 1.335 = 1.1265 ÷ 1.335 = <b>0.84</b></div>
 <div class="why"><b>자기참조 구조.</b> 무게 <code>w</code> 안에 이미 source_trust가 들어있어, <b>믿을 만한 기사가 “전체 신뢰”를 정하는 데 더 큰 목소리</b>를 냅니다. 신뢰 출처 평가로 수렴 → 루머 매체가 우겨도 안 먹혀요.</div>
 <p class="muted">여기선 <code>(trust or 0)</code>이 정상 — 값을 평균내는 자리라 None·0.0 모두 0 기여가 맞습니다(무게 계산과 반대).</p>
@@ -211,40 +210,40 @@ source_trust = (0.9×0.81 + 0.8×0.48 + 0.3×0.045) ÷ 1.335
 <div class="calc">등급 = [ALLOW→1.0, ALLOW→1.0, GRAY→0.6]
 grade_score = (1.0×0.81 + 1.0×0.48 + 0.6×0.045) ÷ 1.335
             = (0.81 + 0.48 + 0.027) ÷ 1.335 = 1.317 ÷ 1.335 = <b>0.99</b></div>
-<div class="why green"><b>왜 source_trust(0.84)와 다른가.</b> grade_score는 <b>코드가 도메인만 보고</b> 3단계로 매긴 이산값(ALLOW는 무조건 1.0), source_trust는 <b>LLM이 내용 읽고</b> 매긴 연속값(로이터라도 0.9). <b>규칙 vs LLM</b>을 독립으로 두어 이중 교차검증합니다.</div>
+<div class="why green"><b>왜 trust_score(0.84)와 다른가.</b> grade_score는 <b>코드가 도메인만 보고</b> 3단계로 매긴 이산값(ALLOW는 무조건 1.0), trust_score는 <b>LLM이 기사별로 매긴 source_trust를 집계</b>한 연속값(로이터라도 0.9). <b>규칙 vs LLM</b>을 독립으로 두어 이중 교차검증합니다.</div>
 <p class="muted">BLOCK(0.0)은 사전필터에서 이미 걸러져 집계엔 거의 안 들어옵니다(방어적 정의). grade_score는 전략가에 전달 안 됨(감사용).</p>
 
 <!-- ═══ 9 ═══ -->
 <h2 id="c9"><span class="n">9.</span>전체 워크드 예제 — 3기사 → 결과 한눈에</h2>
 <p>지금까지 계산을 모으면, NVDA 3기사가 이런 신호가 됩니다.</p>
 <table>
-  <tr><th>컬럼</th><th>값</th><th>근거</th></tr>
-  <tr><td><code>news_count</code></td><td><b>3</b></td><td>분석 기사 수</td></tr>
-  <tr><td><code>confidence</code></td><td><b>0.45</b></td><td>§2 무게 단순평균</td></tr>
-  <tr><td><code>importance</code></td><td><b>0.63</b></td><td>§3 강도 가중평균</td></tr>
-  <tr><td><code>peak_importance</code></td><td><b>0.70</b></td><td>§4 신뢰기사 max(A3 제외)</td></tr>
-  <tr><td><code>sentiment_score</code></td><td><b>0.64</b></td><td>§5 방향집계+감쇠</td></tr>
-  <tr><td><code>sentiment</code>/<code>is_positive</code></td><td><b>positive / 1</b></td><td>§5 파생</td></tr>
-  <tr><td><code>risk_score</code></td><td><b>0.06</b></td><td>§6 위험 가중평균</td></tr>
-  <tr><td><code>source_trust</code></td><td><b>0.84</b></td><td>§7 매체신뢰 가중평균</td></tr>
-  <tr><td><code>grade_score</code></td><td><b>0.99</b></td><td>§8 등급 가중평균</td></tr>
-  <tr><td><code>event_type</code></td><td><b>product_deal</b></td><td>대표=importance×무게 최대(A1: 7×0.81=5.67)</td></tr>
+  <tr><th>컬럼</th><th>값</th><th>근거 (계산)</th><th>{score}_reason (한 문장·LLM)</th></tr>
+  <tr><td><code>news_count</code></td><td><b>3</b></td><td>분석 기사 수</td><td>—</td></tr>
+  <tr><td><code>importance_score</code></td><td><b>0.63</b></td><td>§3 강도 가중평균</td><td><code>Two ALLOW-grade confirmed articles carry the weight; a hyped blog is discounted.</code></td></tr>
+  <tr><td><code>peak_importance_score</code></td><td><b>0.70</b></td><td>§4 신뢰기사 max(A3 제외)</td><td><code>Reuters product-deal item is the strongest credible signal.</code></td></tr>
+  <tr><td><code>sentiment_score</code></td><td><b>0.64</b></td><td>§5 방향집계+감쇠</td><td><code>All articles lean positive; optimism dampened by thin confidence.</code></td></tr>
+  <tr><td><code>sentiment</code></td><td><b>positive</b></td><td>§5 파생 (호재무게만이라 mixed 아님)</td><td>—</td></tr>
+  <tr><td><code>risk_score</code></td><td><b>0.06</b></td><td>§6 위험 가중평균</td><td><code>Only one article flags minor risk; overall downside is low.</code></td></tr>
+  <tr><td><code>trust_score</code></td><td><b>0.84</b></td><td>§7 매체신뢰 가중평균</td><td><code>Weighted toward Reuters and Bloomberg, so source reliability is high.</code></td></tr>
+  <tr><td><code>grade_score</code></td><td><b>0.99</b></td><td>§8 등급 가중평균 (감사용, 미전달)</td><td>—</td></tr>
+  <tr><td><code>event_type</code></td><td><b>product_deal</b></td><td>대표=강도×무게 최대(A1: 7×0.81=5.67)</td><td>—</td></tr>
 </table>
+<p class="muted">참고(감사·저장용, 전달 안 됨): <code>confidence_score</code> 0.45(§2 무게 단순평균) · <code>source_trust</code>는 기사별 입력값이라 집계 컬럼이 아님.</p>
 <div class="why red"><b>한 줄 결론.</b> A3는 강도 9로 제일 시끄러웠지만 — 미확정·저신뢰·GRAY라 무게 0.045로 쪼그라들어
 ❶ 평균 거의 못 움직이고 ❷ peak 제외 ❸ 대표 못 됨. <b>시끄러운 과장이 자동으로 걸러지는 구조</b>입니다.</div>
-<p class="muted">이 중 전달 계약(<code>pack_news_signal</code>)으로 나가는 10필드: has_signal·article_count·event_type·importance_score(←importance)·peak_importance·sentiment_score·risk_score·trust_score(←source_trust)·hard_block·summary.</p>
+<p class="muted">이 중 전달 계약(<code>pack_news_signal</code>)으로 나가는 <b>15필드</b>: has_signal·article_count·event_type·hard_block·summary + 점수 5(importance_score·peak_importance_score·sentiment_score·risk_score·trust_score) + 각 점수의 근거 5(<code>{score}_reason</code>, 한 문장·LLM). 저장은 <code>tb_news</code> <b>29필드</b>.</p>
 
 <!-- ═══ 10 ═══ -->
 <h2 id="c10"><span class="n">10.</span>계산방식 요약 & 코드 위치</h2>
 <table>
   <tr><th>계산 방식</th><th>컬럼</th><th>식</th></tr>
-  <tr><td>신뢰<b>가중평균</b></td><td><code>importance · risk_score · source_trust · grade_score</code></td><td>Σ(값·w)/tw</td></tr>
-  <tr><td><b>단순평균</b></td><td><code>confidence</code></td><td>Σw/n</td></tr>
-  <tr><td><b>최댓값</b></td><td><code>peak_importance</code></td><td>max(importance, cred_mags)</td></tr>
-  <tr><td>방향 가중평균 <b>+ 매핑</b></td><td><code>sentiment_score</code></td><td>_senti_score(Σ(signed·w)/tw, confidence)</td></tr>
-  <tr><td><b>파생</b></td><td><code>sentiment · is_positive</code></td><td>점수·무게 규칙에서</td></tr>
+  <tr><td>신뢰<b>가중평균</b></td><td><code>importance_score · risk_score · trust_score · grade_score</code></td><td>Σ(값·w)/tw</td></tr>
+  <tr><td><b>단순평균</b></td><td><code>confidence_score</code></td><td>Σw/n</td></tr>
+  <tr><td><b>최댓값</b></td><td><code>peak_importance_score</code></td><td>max(importance_score, cred_mags)</td></tr>
+  <tr><td>방향 가중평균 <b>+ 매핑</b></td><td><code>sentiment_score</code></td><td>_senti_score(Σ(signed·w)/tw, confidence_score)</td></tr>
+  <tr><td><b>파생</b></td><td><code>sentiment</code></td><td>점수·무게 규칙에서</td></tr>
 </table>
-<div class="why"><b>가중 vs 단순의 핵심.</b> 강도·위험·신뢰는 <b>가중</b>(저신뢰 무시)해서 “믿을 만한 값”을 얻고, confidence만 <b>단순</b>(저신뢰도 한 표)으로 “근거 두께”를 정직하게 드러냅니다. 같은 재료로 두 방식을 쓰는 게 설계의 묘.</div>
+<div class="why"><b>가중 vs 단순의 핵심.</b> 강도·위험·신뢰는 <b>가중</b>(저신뢰 무시)해서 “믿을 만한 값”을 얻고, confidence_score만 <b>단순</b>(저신뢰도 한 표)으로 “근거 두께”를 정직하게 드러냅니다. 같은 재료로 두 방식을 쓰는 게 설계의 묘.</div>
 <table>
   <tr><th>보고 싶은 것</th><th>파일 · 심볼</th></tr>
   <tr><td>모든 집계 로직</td><td><code>app/common/analysis_bundle.py · build_news_bundle()</code></td></tr>

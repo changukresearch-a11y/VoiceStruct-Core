@@ -238,8 +238,8 @@ peak = max(0.63, 0.7, 0.5) = <b>0.70</b>   ← A3의 0.9가 아니라 A1의 0.7<
 <div class="why"><span class="t">importance(0.63)랑 왜 비슷하지? — 우연입니다</span>
 이 예제는 세 기사가 <b>전부 호재</b>라, 방향값(부호 +)이 강도와 사실상 같아서 숫자가 겹쳐 보입니다.
 하지만 개념은 완전히 달라요: importance는 <b>부호 없는 크기</b>, sentiment는 <b>부호 있는 방향</b> + 매핑 + 감쇠. 호재·악재가 섞이면 둘은 확 벌어집니다.</div>
-<h4>덤 · 라벨(sentiment)과 is_positive</h4>
-<p>사람이 읽기 쉽게 점수에서 <b>라벨</b>을 뽑습니다: <code>positive/negative/neutral</code>, 그리고 호재·악재가 <b>둘 다 유의미하면 mixed</b>. <code>is_positive</code>는 <code>점수 &gt; 0.5</code>인지의 참/거짓이에요. 라벨을 <b>최종 점수에서</b> 뽑기 때문에 “점수는 0.4인데 라벨은 호재” 같은 모순이 없습니다.</p>
+<h4>덤 · 라벨(sentiment)</h4>
+<p>사람이 읽기 쉽게 점수에서 <b>라벨</b>을 뽑습니다: <code>positive/negative/neutral</code>, 그리고 호재·악재가 <b>둘 다 유의미하면 mixed</b>. 라벨을 <b>최종 점수에서</b> 뽑기 때문에 “점수는 0.4인데 라벨은 호재” 같은 모순이 없습니다.</p>
 
 <!-- 10 -->
 <h2 id="c10"><span class="n">10.</span> risk_score — 위험은 왜 따로 재나</h2>
@@ -263,7 +263,7 @@ risk_score는 <b>0~1 참고 강도</b>(위험이 이 정도 있다)이고, hard_
   <tr><td><code>grade_score</code></td><td>매체가 믿을 만한가 (<b>도메인</b> 기준)</td><td>⚙️ 코드 (주소만 보고)</td><td>가중평균</td></tr>
 </table>
 <h4>source_trust와 grade_score는 왜 둘 다?</h4>
-<div class="calc">source_trust = (0.9×0.81 + 0.8×0.48 + 0.3×0.045) ÷ 1.335 = <b>0.84</b>   <span style="color:var(--sub)"># LLM: 로이터라도 0.9로 신중</span>
+<div class="calc">trust_score = (0.9×0.81 + 0.8×0.48 + 0.3×0.045) ÷ 1.335 = <b>0.84</b>   <span style="color:var(--sub)"># 기사별 source_trust를 무게로 가중평균. LLM: 로이터라도 0.9로 신중</span>
 grade_score  = (1.0×0.81 + 1.0×0.48 + 0.6×0.045) ÷ 1.335 = <b>0.99</b>   <span style="color:var(--sub)"># 코드: ALLOW면 무조건 1.0</span></div>
 <div class="why green"><span class="t">이중 교차검증 (감사)</span>
 <b>LLM 판단(source_trust)</b>과 <b>기계적 규칙(grade_score)</b>을 독립으로 둬서 서로를 검사하게 합니다:
@@ -274,7 +274,7 @@ grade_score  = (1.0×0.81 + 1.0×0.48 + 0.6×0.045) ÷ 1.335 = <b>0.99</b>   <sp
 하나가 뚫려도 다른 하나가 막는 <b>이중 안전망</b>입니다. 그래서 겹쳐 보여도 안 합쳐요.</div>
 <div class="qbox"><span class="q">그럼 confidence는?</span>
 앞의 둘이 “매체가 믿을 만한가”라면, confidence는 “<b>근거가 두꺼운가</b>”로 질문 자체가 달라요. 게다가 유일하게 <b>단순평균</b>이라, 약한 기사도 정직하게 반영됩니다(§6).</div>
-<p class="muted">전략가에게 나가는 신뢰는 <code>source_trust</code>(이름은 <code>trust_score</code>로) 하나뿐. grade_score·confidence는 내부 감사·계산용입니다.</p>
+<p class="muted">전략가에게 나가는 신뢰는 <code>trust_score</code>(§11의 source_trust 집계 결과) 하나뿐. grade_score·confidence는 내부 감사·계산용입니다.</p>
 
 <!-- 12 -->
 <h2 id="c12"><span class="n">12.</span> 전체를 한 번에 — 3기사가 신호가 되기까지</h2>
@@ -282,12 +282,12 @@ grade_score  = (1.0×0.81 + 1.0×0.48 + 0.6×0.045) ÷ 1.335 = <b>0.99</b>   <sp
 <table>
   <tr><th>결과값</th><th>값</th><th>의미</th></tr>
   <tr><td>news_count</td><td>3</td><td>기사 3건</td></tr>
-  <tr><td>confidence</td><td>0.45</td><td>근거는 중간 두께 (A3가 끌어내림)</td></tr>
-  <tr><td>importance</td><td>0.63</td><td>중간 강도의 사건</td></tr>
-  <tr><td>peak_importance</td><td>0.70</td><td>믿을 만한 것 중 더 센 게 하나 있음</td></tr>
+  <tr><td>confidence_score</td><td>0.45</td><td>근거는 중간 두께 (A3가 끌어내림)</td></tr>
+  <tr><td>importance_score</td><td>0.63</td><td>중간 강도의 사건</td></tr>
+  <tr><td>peak_importance_score</td><td>0.70</td><td>믿을 만한 것 중 더 센 게 하나 있음</td></tr>
   <tr><td>sentiment_score</td><td>0.64</td><td>완만한 호재 (확신도로 눌림)</td></tr>
   <tr><td>risk_score</td><td>0.06</td><td>하방 위험 거의 없음</td></tr>
-  <tr><td>source_trust</td><td>0.84</td><td>매체 신뢰 높음 (LLM)</td></tr>
+  <tr><td>trust_score</td><td>0.84</td><td>매체 신뢰 높음 (LLM, source_trust 가중평균)</td></tr>
   <tr><td>grade_score</td><td>0.99</td><td>도메인 등급 최상 (코드)</td></tr>
   <tr><td>event_type</td><td>product_deal</td><td>대표 기사(A1)의 유형</td></tr>
 </table>
@@ -317,7 +317,7 @@ grade_score  = (1.0×0.81 + 1.0×0.48 + 0.6×0.045) ÷ 1.335 = <b>0.99</b>   <sp
 <div class="qbox"><span class="q">Q. 저신뢰 기사를 아예 버리면 안 되나?</span>
 완전히 버리는 대신 <b>무게를 아주 작게</b> 줍니다. 그래야 confidence가 “근거 얇음”을 정직하게 낮게 반영할 수 있어요. 아예 버리면 그 사실이 사라집니다. (단, 명백한 노이즈·차단 도메인은 AI를 부르기 전 사전필터에서 제거해요.)</div>
 <div class="qbox"><span class="q">Q. 이 값들이 전부 전략가에게 가나?</span>
-아니요. 전략가에겐 <b>핵심 10개</b>만 압축해 전달합니다(<code>has_signal·article_count·event_type·importance·peak·sentiment·risk·trust·hard_block·summary</code>). confidence·grade_score 등은 저장(감사·근거추적)용이에요.</div>
+아니요. 전략가에겐 <b>핵심 값들만 압축해 15필드</b>로 전달합니다(<code>has_signal·article_count·event_type·importance_score·peak_importance_score·sentiment_score·risk_score·trust_score·hard_block·summary</code> 등). 게다가 전달되는 <b>각 _score마다 근거 컬럼 <code>{score}_reason</code></b>(LLM이 쓴 한 문장 설명)이 함께 붙어, 전략가가 그 점수가 왜 그렇게 나왔는지 바로 읽을 수 있어요. confidence·grade_score 등은 저장(감사·근거추적)용이에요.</div>
 
 <hr class="soft">
 <p class="muted">📌 압축 레퍼런스는 <a href="뉴스_집계공식_상세+예시_팀공유.html">「뉴스 집계 공식 상세 + 예시」</a>, 컬럼 개요는 <a href="뉴스_컬럼_쉽게_이해하기_팀공유.html">「뉴스 컬럼 완전 가이드」</a>, 공시 쪽은 <a href="공시_컬럼_완전가이드_팀공유.html">「공시 완전 가이드」</a>, 전 컬럼 사전은 <a href="공시·뉴스_전체컬럼_상세사전_팀공유.html">「전체 컬럼 상세 사전」</a>.</p>
