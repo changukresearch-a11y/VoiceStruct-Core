@@ -107,16 +107,16 @@
     <nav id="toc">
       <a href="#legend">범례 · 원천 5종</a>
       <a href="#helpers">공통 산출 헬퍼</a>
-      <div class="grp">📄 tb_disclosure (18)</div>
+      <div class="grp">📄 tb_disclosure (19)</div>
       <a href="#d-meta">A. 종목·원문 메타 (1~7)</a>
-      <a href="#d-signal">B. 신호 점수 (8~14)</a>
-      <a href="#d-safe">C. 안전·요약 (15~18)</a>
-      <div class="grp">📰 tb_news (25)</div>
+      <a href="#d-signal">B. 신호 점수 (8~15)</a>
+      <a href="#d-safe">C. 안전·요약 (16~19)</a>
+      <div class="grp">📰 tb_news (26)</div>
       <a href="#n-meta">A. 메타 (1~4)</a>
       <a href="#n-rep">B. 대표 기사 복사 (5~13)</a>
-      <a href="#n-agg">C. 신뢰가중 집계 (14~22)</a>
-      <a href="#n-hard">D. 하드 스캔 (23~24)</a>
-      <a href="#n-ev">E. 근거 정렬 (25)</a>
+      <a href="#n-agg">C. 신뢰가중 집계 (14~23)</a>
+      <a href="#n-hard">D. 하드 스캔 (24~25)</a>
+      <a href="#n-ev">E. 근거 정렬 (26)</a>
       <div class="grp">참고</div>
       <a href="#weight">신뢰가중치 weight 심화</a>
     </nav>
@@ -128,12 +128,12 @@
     <div class="badges">
       <span class="badge" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;font-weight:700">🧬 데이터 계보</span>
       <span class="badge">컬럼별 원천→처리→결정</span>
-      <span class="badge">tb_disclosure 18 · tb_news 25</span>
+      <span class="badge">tb_disclosure 19 · tb_news 26</span>
       <span class="badge">코드 1:1 · 2026-07-09</span>
     </div>
     <h1>컬럼값 <span class="grad">산출·근거 데이터 계보</span></h1>
     <div class="accent-bar"></div>
-    <p class="tag">tb_disclosure(18)·tb_news(25)의 <b>모든 컬럼</b>에 대해 — <b>① 값을 어디서 가져오고(원천)</b> · <b>② 어떤 수식·매핑으로 처리하며(처리)</b> · <b>③ 어떤 규칙으로 최종값이 결정되나(결정)</b>를 실제 코드(<code>analysis_bundle.py</code>·<code>bundle_snapshot.py</code>) 그대로 추적한 데이터 계보(lineage) 문서.</p>
+    <p class="tag">tb_disclosure(19)·tb_news(26)의 <b>모든 컬럼</b>에 대해 — <b>① 값을 어디서 가져오고(원천)</b> · <b>② 어떤 수식·매핑으로 처리하며(처리)</b> · <b>③ 어떤 규칙으로 최종값이 결정되나(결정)</b>를 실제 코드(<code>analysis_bundle.py</code>·<code>bundle_snapshot.py</code>) 그대로 추적한 데이터 계보(lineage) 문서.</p>
     <div class="meta">
       <span>담당 <b>정창욱</b></span>
       <span>기준 <b>build_disclosure_bundle · build_news_bundle</b></span>
@@ -213,7 +213,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">스크리닝이 넘긴 종목 심볼(빌더 인자 <code>ticker</code>).</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>ticker.upper()</code> — 대문자 통일.</div></div>
-        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">PK의 한 축(<code>collected_at</code>과 복합키). tb_daily_pick FK.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">단일 <code>_id</code> AUTOINCREMENT PK + <code>(ticker, collected_at)</code> UNIQUE의 한 축. tb_daily_pick FK.</div></div>
       </div>
     </div>
 
@@ -222,7 +222,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">빌더 실행 순간의 시스템 시각 <code>_now()</code>.</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>datetime.now(timezone.utc).isoformat(timespec="seconds")</code> — UTC·초 단위.</div></div>
-        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">PK의 한 축. 새 스냅샷마다 새 값 → 시계열 append(덮어쓰기 X). Strategist는 <code>ORDER BY collected_at DESC LIMIT 1</code>로 최신 행.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">단일 <code>_id</code> AUTOINCREMENT PK + <code>(ticker, collected_at)</code> UNIQUE의 한 축. 새 스냅샷마다 새 값 → 시계열 append(덮어쓰기 X). Strategist는 <code>ORDER BY collected_at DESC LIMIT 1</code>로 최신 행.</div></div>
       </div>
     </div>
 
@@ -240,7 +240,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">대표 공시 결과의 <code>signal</code> 존재 여부.</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">빌더 진입 시 0으로 시작 → <code>sig = disclosure_result.signal</code>이 <code>None</code>이 아니면 1로 set.</div></div>
-        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b"><b>0이면 8~18번 분석 컬럼 전부 null(기본값)</b>. Strategist는 <code>has_signal=1</code> 행만 읽음. 공시 없는 종목도 이 행 자체는 생성(균일 50행).</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b"><b>0이면 8~19번 분석 컬럼 전부 null(기본값)</b>. Strategist는 <code>has_signal=1</code> 행만 읽음. 공시 없는 종목도 이 행 자체는 생성(균일 50행).</div></div>
       </div>
     </div>
 
@@ -274,7 +274,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
   </section>
 
   <section id="d-signal">
-    <h2><span class="n disc">📄</span> tb_disclosure · B. 신호 점수 (8~14)</h2>
+    <h2><span class="n disc">📄</span> tb_disclosure · B. 신호 점수 (8~15)</h2>
     <p class="lead">LLM(<code>DisclosureSignal</code>) 원시값을 코드가 정규화·환산. <code>conf = _CERTAINTY.get(certainty_level, 0.5)</code>를 먼저 구해 여러 컬럼이 공유.</p>
 
     <div class="lin">
@@ -287,7 +287,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
     </div>
 
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">12</span><span class="lin-col">importance</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-llm">LLM→CODE</span></div>
+      <div class="lin-h"><span class="lin-no">13</span><span class="lin-col">importance</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-llm">LLM→CODE</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.importance</code>(0~10 정수). 상폐=10·대형M&amp;A=8~9·일상=1~2.</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>_n10(sig.importance)</code> → 0~1.</div></div>
@@ -297,7 +297,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
     </div>
 
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">14</span><span class="lin-col">confidence</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-llm">LLM→CODE</span></div>
+      <div class="lin-h"><span class="lin-no">15</span><span class="lin-col">confidence</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-llm">LLM→CODE</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.certainty_level</code>(High/Medium/Low).</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>_CERTAINTY.get(certainty_level, 0.5)</code> → round 2. High=0.9·Med=0.6·Low=0.3.</div></div>
@@ -325,7 +325,16 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
     </div>
 
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">11</span><span class="lin-col">reason</span><span class="lin-ty">TEXT</span><span class="src s-llm">LLM</span></div>
+      <div class="lin-h"><span class="lin-no">11</span><span class="lin-col">is_positive</span><span class="lin-ty">INT 0/1</span><span class="src s-code">CODE 파생</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">원천 데이터 없음 — 위 <code>sentiment_score</code>(10번)에서 파생.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>1 if sentiment_score &gt; 0.5 else 0</code>(bool 파생). sentiment_score가 산출된 뒤 그 값에서 이진화. 2026-07-09 코드리뷰 반영으로 추가.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">참이면 1(호재)·거짓 0. 전략가가 호재/악재를 불리언으로 빠르게 필터링하도록 <code>sentiment_score</code>의 방향을 이진화한 편의 필드.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">12</span><span class="lin-col">reason</span><span class="lin-ty">TEXT</span><span class="src s-llm">LLM</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.reason</code>(영어 한 줄, 수치 포함 권장).</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">가공 없음.</div></div>
@@ -334,7 +343,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
     </div>
 
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">13</span><span class="lin-col">risk_score</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">LLM→CODE 집계</span></div>
+      <div class="lin-h"><span class="lin-no">14</span><span class="lin-col">risk_score</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">LLM→CODE 집계</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.risk_score</code>(0~10) + 하드리스크 <code>risk_score_min</code> + 오늘 공시 전체.</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">① 파이프라인: 하드리스크 있으면 <code>risk = max(sig.risk_score, hard_risk.risk_score_min)</code>. ② 빌더: <code>_n10(sig.risk_score)</code>. ③ <b>스케줄러 override</b>: <code>disclosure_risk_max</code>(오늘 공시 전체 <code>_n10(risk)</code> 최댓값)가 더 크면 그 값으로 대체.</div></div>
@@ -345,10 +354,10 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
   </section>
 
   <section id="d-safe">
-    <h2><span class="n disc">📄</span> tb_disclosure · C. 안전·요약 (15~18)</h2>
+    <h2><span class="n disc">📄</span> tb_disclosure · C. 안전·요약 (16~19)</h2>
 
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">15</span><span class="lin-col">hard_block</span><span class="lin-ty">INT 0/1 🛡️</span><span class="src s-code">CODE 집계</span></div>
+      <div class="lin-h"><span class="lin-no">16</span><span class="lin-col">hard_block</span><span class="lin-ty">INT 0/1 🛡️</span><span class="src s-code">CODE 집계</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">각 공시의 <code>final_permission</code>(decide_final_permission 결과) — BLOCK_ALL·BLOCK_BUY 여부.</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">① 빌더: 대표 공시 <code>final_permission ∈ {BLOCK_ALL, BLOCK_BUY}</code>면 1. ② 스케줄러 <code>disclosure_block</code>: 오늘 공시 중 <b>하나라도</b> BLOCK류면 1(<b>OR 집계</b>).</div></div>
@@ -357,7 +366,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
     </div>
 
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">16</span><span class="lin-col">hard_block_reason</span><span class="lin-ty">TEXT 🛡️</span><span class="src s-code">CODE</span></div>
+      <div class="lin-h"><span class="lin-no">17</span><span class="lin-col">hard_block_reason</span><span class="lin-ty">TEXT 🛡️</span><span class="src s-code">CODE</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">차단 유발 공시의 <code>final_reason</code>.</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">빌더는 대표의 final_reason, 스케줄러는 OR로 처음 잡힌 사유를 <code>or</code>로 보존.</div></div>
@@ -366,7 +375,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
     </div>
 
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">17</span><span class="lin-col">summary</span><span class="lin-ty">TEXT</span><span class="src s-llm">LLM</span></div>
+      <div class="lin-h"><span class="lin-no">18</span><span class="lin-col">summary</span><span class="lin-ty">TEXT</span><span class="src s-llm">LLM</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.summary</code>(공시 전문 3~4줄 요약, 영어).</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b">가공 없음(to_prompt에서만 개행 공백접기).</div></div>
@@ -375,7 +384,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
     </div>
 
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">18</span><span class="lin-col">keywords</span><span class="lin-ty">TEXT[]</span><span class="src s-llm">LLM</span></div>
+      <div class="lin-h"><span class="lin-no">19</span><span class="lin-col">keywords</span><span class="lin-ty">TEXT[]</span><span class="src s-llm">LLM</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">LLM <code>sig.keywords</code>(핵심 5개).</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>list(sig.keywords or [])</code>. DB 저장 시 <code>", ".join</code>으로 접어 TEXT.</div></div>
@@ -470,7 +479,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
   </section>
 
   <section id="n-agg">
-    <h2><span class="n news">📰</span> tb_news · C. 전체 기사 신뢰가중 집계 (14~22)</h2>
+    <h2><span class="n news">📰</span> tb_news · C. 전체 기사 신뢰가중 집계 (14~23)</h2>
     <p class="lead">대표 1건이 아니라 <b>analyzed 전체</b>를 <code>weight = _news_conf</code>로 가중 집계. <code>tw = Σweight</code>가 공통 분모.</p>
 
     <div class="lin">
@@ -521,7 +530,16 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
     </div>
 
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">19</span><span class="lin-col">sentiment</span><span class="lin-ty">TEXT(라벨)</span><span class="src s-code">CODE 파생</span></div>
+      <div class="lin-h"><span class="lin-no">19</span><span class="lin-col">is_positive</span><span class="lin-ty">INT 0/1</span><span class="src s-code">CODE 파생</span></div>
+      <div class="lin-b">
+        <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">원천 데이터 없음 — 위 <code>sentiment_score</code>(18번)에서 파생.</div></div>
+        <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>1 if sentiment_score &gt; 0.5 else 0</code>(bool 파생). sentiment_score가 산출된 뒤 그 값에서 이진화. 2026-07-09 코드리뷰 반영으로 추가.</div></div>
+        <div class="lf"><span class="lf-n n3">결정</span><div class="lf-b">참이면 1(호재)·거짓 0. 전략가가 호재/악재를 불리언으로 빠르게 필터링하도록 <code>sentiment_score</code>의 방향을 이진화한 편의 필드.</div></div>
+      </div>
+    </div>
+
+    <div class="lin">
+      <div class="lin-h"><span class="lin-no">20</span><span class="lin-col">sentiment</span><span class="lin-ty">TEXT(라벨)</span><span class="src s-code">CODE 파생</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">18번 <code>sentiment_score</code>, 방향별 가중합 <code>pos_w</code>·<code>neg_w</code>.</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>negative if strong_neg</code> → <code>mixed if min(pos_w,neg_w)/tw ≥ 0.30</code> → <code>positive if score&gt;0.5</code> → <code>negative if &lt;0.5</code> → <code>neutral</code>.</div></div>
@@ -530,7 +548,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
     </div>
 
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">20</span><span class="lin-col">source_trust</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">LLM→CODE 집계</span></div>
+      <div class="lin-h"><span class="lin-no">21</span><span class="lin-col">source_trust</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">LLM→CODE 집계</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">각 기사 LLM <code>signal.source_trust</code>(0~1, 출처+본문 톤 판단).</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>Σ((trust or 0) × w) / tw</code>.</div></div>
@@ -539,7 +557,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
     </div>
 
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">21</span><span class="lin-col">grade_score</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">CODE 집계</span></div>
+      <div class="lin-h"><span class="lin-no">22</span><span class="lin-col">grade_score</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">CODE 집계</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">각 기사 <code>source_grade</code>(<code>classify_source</code> 도메인 판정 ALLOW/GRAY/BLOCK).</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>Σ(_GRADE_SCORE.get(grade, 0.6) × w) / tw</code>. ALLOW1·GRAY.6·BLOCK0, 미등급 0.6.</div></div>
@@ -548,7 +566,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
     </div>
 
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">22</span><span class="lin-col">confidence</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">CODE 집계</span></div>
+      <div class="lin-h"><span class="lin-no">23</span><span class="lin-col">confidence</span><span class="lin-ty">NUMERIC 0~1</span><span class="src s-code">CODE 집계</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">기사별 <code>raw_weights = [_news_conf(sig)]</code>(감쇠 폴백 전 원본).</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>sum(raw_weights) / len(raw_weights)</code> 단순평균, round 2.</div></div>
@@ -558,9 +576,9 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
   </section>
 
   <section id="n-hard">
-    <h2><span class="n news">📰</span> tb_news · D. 코드 하드 스캔 (23~24)</h2>
+    <h2><span class="n news">📰</span> tb_news · D. 코드 하드 스캔 (24~25)</h2>
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">23·24</span><span class="lin-col">hard_block · hard_block_reason</span><span class="lin-ty">INT 0/1 · TEXT 🛡️</span><span class="src s-code">CODE</span></div>
+      <div class="lin-h"><span class="lin-no">24·25</span><span class="lin-col">hard_block · hard_block_reason</span><span class="lin-ty">INT 0/1 · TEXT 🛡️</span><span class="src s-code">CODE</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">모든 뉴스 결과 <code>r.final_permission</code>(사전필터 BLOCK 또는 LLM 권한).</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>for r in results: if r.final_permission ∈ {BLOCK_ALL, BLOCK_BUY}: hard_block=1</code>, reason=처음 잡힌 <code>final_reason</code>(<code>or</code> 보존).</div></div>
@@ -570,9 +588,9 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
   </section>
 
   <section id="n-ev">
-    <h2><span class="n news">📰</span> tb_news · E. 코드 정렬 상위 3 (25)</h2>
+    <h2><span class="n news">📰</span> tb_news · E. 코드 정렬 상위 3 (26)</h2>
     <div class="lin">
-      <div class="lin-h"><span class="lin-no">25</span><span class="lin-col">top_evidence</span><span class="lin-ty">TEXT[] 고정3</span><span class="src s-code">CODE 정렬</span></div>
+      <div class="lin-h"><span class="lin-no">26</span><span class="lin-col">top_evidence</span><span class="lin-ty">TEXT[] 고정3</span><span class="src s-code">CODE 정렬</span></div>
       <div class="lin-b">
         <div class="lf"><span class="lf-n n1">원천</span><div class="lf-b">대표선정과 <b>같은 <code>scored</code></b>(importance×weight 내림차순) 상위 3.</div></div>
         <div class="lf"><span class="lf-n n2">처리</span><div class="lf-b"><code>["{source}: {title[:60]}" for scored[:3]]</code> → <code>(ev + [None,None,None])[:3]</code> 고정 3칸. DB는 <code>" | ".join</code>(None 제외).</div></div>
@@ -585,7 +603,7 @@ tw = sum(weights)   <span class="cm"># 모든 신뢰가중 평균의 분모</spa
   <!-- ══════════ 신뢰가중 심화 ══════════ -->
   <section id="weight">
     <h2><span class="n core">★</span> 신뢰가중치 weight — 뉴스 집계의 심장</h2>
-    <div class="callout c-tip">뉴스 C그룹(15~22)과 대표선정·top_evidence가 모두 이 <b>기사별 weight</b>에 의존한다. weight를 한 번 이해하면 tb_news 집계 전체가 풀린다.</div>
+    <div class="callout c-tip">뉴스 C그룹(15~23)과 대표선정·top_evidence가 모두 이 <b>기사별 weight</b>에 의존한다. weight를 한 번 이해하면 tb_news 집계 전체가 풀린다.</div>
     <div class="flow"><span class="cm"># 기사 1건의 신뢰가중치 (0~1)</span>
 weight = certainty_factor × confirmed_factor × source_trust
   certainty_factor = {High:0.9, Medium:0.6, Low:0.3, 기타:0.5}[certainty_level]  <span class="cm"># LLM 확신</span>

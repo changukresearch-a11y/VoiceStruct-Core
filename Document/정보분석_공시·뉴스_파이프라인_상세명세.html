@@ -107,12 +107,12 @@
       <a href="#d-hardrisk">04 · 하드리스크 스캔</a>
       <a href="#d-llm">05 · 공시 LLM 분석</a>
       <a href="#d-form4">06 · Form 4 코드 스코어링</a>
-      <a href="#d-erd">07 · tb_disclosure ERD 18</a>
+      <a href="#d-erd">07 · tb_disclosure ERD 19</a>
       <div class="grp">📰 뉴스 (News)</div>
       <a href="#n-collect">08 · 뉴스 수집 (RSS)</a>
       <a href="#n-prefilter">09 · 사전필터 (출처·키워드)</a>
       <a href="#n-llm">10 · 뉴스 LLM 분석</a>
-      <a href="#n-erd">11 · tb_news ERD 25</a>
+      <a href="#n-erd">11 · tb_news ERD 26</a>
       <div class="grp">🧮 공통 코어</div>
       <a href="#agg">12 · 집계 산출식 상세</a>
       <a href="#permission">13 · 매매권한 6단계</a>
@@ -138,7 +138,7 @@
     <p class="tag">팀 파이프라인 <b>05 공시 · 06 뉴스</b> 파트를 <b>실제 코드 그대로</b> 기록한 상세명세. 각 단계가 <b>무엇을 수집하고(수집) · 어떻게 판정하며(라우팅·하드룰·LLM) · 어떤 점수를 어떤 식으로 산출하고(집계) · 어떤 표를 남기나(ERD)</b>를 실행 순서로 정리한 개발·인수인계용 지도.</p>
     <div class="meta">
       <span>담당 <b>정창욱</b> · 공시·뉴스 정보분석</span>
-      <span>산출 <b>tb_disclosure(18) · tb_news(25)</b></span>
+      <span>산출 <b>tb_disclosure(19) · tb_news(26)</b></span>
       <span>LLM <b>Pydantic AI · 구조화 강제</b></span>
       <span>기준 <b>가장 보수적 채택 · 코드=사실 / LLM=해석</b></span>
     </div>
@@ -353,15 +353,15 @@ check_hard_risk(text):  # text.lower()에서 첫 매치
 
   <!-- ══════════ 07 tb_disclosure ══════════ -->
   <section id="d-erd">
-    <h2><span class="n disc">07</span> tb_disclosure — ERD 18필드 (컬럼별 산출)</h2>
+    <h2><span class="n disc">07</span> tb_disclosure — ERD 19필드 (컬럼별 산출)</h2>
     <div class="card">
-      <div class="step-meta"><span class="pill">📤 DisclosureBundle → tb_disclosure</span><span class="pill">PK=(ticker, collected_at)</span><span class="pill">매 사이클 50행 append</span></div>
+      <div class="step-meta"><span class="pill">📤 DisclosureBundle → tb_disclosure</span><span class="pill">단일 _id AUTOINCREMENT PK + (ticker, collected_at) UNIQUE</span><span class="pill">매 사이클 50행 append</span></div>
       <p>매 공시 사이클(1h) 50종목 각각을 <b>한 행으로 집계</b>해 append(덮어쓰기 X, 시계열 누적). 공시 없는 종목도 <code>has_signal=0</code> 빈 행 → 항상 50행/사이클. Strategist는 종목별 <b>최신 행</b>을 읽는다. 점수는 전부 0~1.</p>
       <table>
         <thead><tr><th>#</th><th>컬럼</th><th>타입</th><th>산출 방식 · 근거</th></tr></thead>
         <tbody>
-          <tr><td>1</td><td><code>ticker</code> 🔑</td><td>TEXT</td><td>종목 심볼(대문자). PK</td></tr>
-          <tr><td>2</td><td><code>collected_at</code> 🔑</td><td>TS</td><td>스냅샷 생성 시각 <code>_now()</code>(UTC ISO 초). PK</td></tr>
+          <tr><td>1</td><td><code>ticker</code> 🔑</td><td>TEXT</td><td>종목 심볼(대문자). (ticker, collected_at) UNIQUE</td></tr>
+          <tr><td>2</td><td><code>collected_at</code> 🔑</td><td>TS</td><td>스냅샷 생성 시각 <code>_now()</code>(UTC ISO 초). (ticker, collected_at) UNIQUE</td></tr>
           <tr><td>3</td><td><code>trade_date</code> 🔗</td><td>DATE</td><td>분석 기준일(FK→tb_daily_pick). 구 as_of</td></tr>
           <tr><td>4</td><td><code>has_signal</code></td><td>0/1</td><td>대표 공시 있으면 1(없으면 뒤 컬럼 null)</td></tr>
           <tr><td>5</td><td><code>filing_title</code></td><td>TEXT</td><td>대표 공시 제목 = item.title</td></tr>
@@ -370,14 +370,15 @@ check_hard_risk(text):  # text.lower()에서 첫 매치
           <tr><td>8</td><td><code>event_type</code></td><td>TEXT</td><td><code>norm_event(sig.event_type)</code> 정규화(§14)</td></tr>
           <tr><td>9</td><td><code>sentiment</code></td><td>TEXT</td><td>sentiment_score에서 파생(라벨↔점수 일치)</td></tr>
           <tr><td>10</td><td><code>sentiment_score</code></td><td>0~1</td><td><code>_senti_score(sign×importance, confidence)</code>. 0=강악재·0.5=중립·1=강호재(§12)</td></tr>
-          <tr><td>11</td><td><code>reason</code></td><td>TEXT</td><td>sig.reason(대표 공시 LLM 근거)</td></tr>
-          <tr><td>12</td><td><code>importance</code></td><td>0~1</td><td><code>_n10(sig.importance)</code>. 방향 뺀 강도 축</td></tr>
-          <tr><td>13</td><td><code>risk_score</code></td><td>0~1</td><td><b>오늘 공시 전체 최댓값</b> <code>disclosure_risk_max</code>(치명위험 보존)</td></tr>
-          <tr><td>14</td><td><code>confidence</code></td><td>0~1</td><td>certainty_level 매핑: High0.9·Medium0.6·Low0.3</td></tr>
-          <tr><td>15</td><td><code>hard_block</code> 🛡️</td><td>0/1</td><td>대표 or 오늘 공시 중 <b>하나라도</b> BLOCK류면 1(OR 집계)</td></tr>
-          <tr><td>16</td><td><code>hard_block_reason</code></td><td>TEXT</td><td>차단 유발 공시의 final_reason</td></tr>
-          <tr><td>17</td><td><code>summary</code></td><td>TEXT</td><td>대표 공시 3~4줄 요약(영어)</td></tr>
-          <tr><td>18</td><td><code>keywords</code></td><td>TEXT[]</td><td>핵심 키워드 5개</td></tr>
+          <tr><td>11</td><td><code>is_positive</code></td><td>INTEGER (0/1)</td><td><code>sentiment_score &gt; 0.5</code>(초과 1=호재, 이하 0). 코드 파생 bool. 2026-07-09 코드리뷰 반영 추가</td></tr>
+          <tr><td>12</td><td><code>reason</code></td><td>TEXT</td><td>sig.reason(대표 공시 LLM 근거)</td></tr>
+          <tr><td>13</td><td><code>importance</code></td><td>0~1</td><td><code>_n10(sig.importance)</code>. 방향 뺀 강도 축</td></tr>
+          <tr><td>14</td><td><code>risk_score</code></td><td>0~1</td><td><b>오늘 공시 전체 최댓값</b> <code>disclosure_risk_max</code>(치명위험 보존)</td></tr>
+          <tr><td>15</td><td><code>confidence</code></td><td>0~1</td><td>certainty_level 매핑: High0.9·Medium0.6·Low0.3</td></tr>
+          <tr><td>16</td><td><code>hard_block</code> 🛡️</td><td>0/1</td><td>대표 or 오늘 공시 중 <b>하나라도</b> BLOCK류면 1(OR 집계)</td></tr>
+          <tr><td>17</td><td><code>hard_block_reason</code></td><td>TEXT</td><td>차단 유발 공시의 final_reason</td></tr>
+          <tr><td>18</td><td><code>summary</code></td><td>TEXT</td><td>대표 공시 3~4줄 요약(영어)</td></tr>
+          <tr><td>19</td><td><code>keywords</code></td><td>TEXT[]</td><td>핵심 키워드 5개</td></tr>
         </tbody>
       </table>
       <div class="callout c-info">🧩 <b>집계 = 종목당 오늘 공시 1행.</b> 방향성·메타는 <b>대표 1건</b>(<code>disclosure_rep</code> = hard_block 우선 → importance 최대)에서 뽑되, <b>risk_score=최댓값·hard_block=OR</b>로 보존해 치명 위험이 집계에 묻히지 않게 한다(명세 §05). ❌ 삭제 6필드: company_name·category(JOIN)·confirmed_score(늘1.0)·fact_check(상수)·verdict(중복)·ref(filing_no 중복).</div>
@@ -465,17 +466,17 @@ check_hard_risk(text):  # text.lower()에서 첫 매치
 
   <!-- ══════════ 11 tb_news ══════════ -->
   <section id="n-erd">
-    <h2><span class="n news">11</span> tb_news — ERD 25필드 (disclosure_ref 신설 포함)</h2>
+    <h2><span class="n news">11</span> tb_news — ERD 26필드 (disclosure_ref 신설 포함)</h2>
     <div class="card">
-      <div class="step-meta"><span class="pill">📤 NewsBundle → tb_news</span><span class="pill">PK=(ticker, collected_at)</span><span class="pill">매 5분 50행 append</span></div>
+      <div class="step-meta"><span class="pill">📤 NewsBundle → tb_news</span><span class="pill">단일 _id AUTOINCREMENT PK + (ticker, collected_at) UNIQUE</span><span class="pill">매 5분 50행 append</span></div>
       <p>매 뉴스 사이클(5m) 종목별 <b>오늘 뉴스 전체를 신뢰가중으로 한 행 집계</b>. 순서는 출처 기반 5그룹(A메타·B대표복사·C집계·D하드·E정렬). 산출식은 §12.</p>
       <table style="font-size:12.5px">
         <thead><tr><th>#</th><th>컬럼</th><th>타입</th><th>산출 방식 · 근거</th></tr></thead>
         <tbody>
           <tr style="background:#eaf1ec"><td colspan="4" style="font-weight:700;color:#166534">━ A. 종목·시각 메타 (코드 세팅) ━</td></tr>
-          <tr><td>1</td><td><code>ticker</code> 🔑</td><td>TEXT</td><td>PK</td></tr>
+          <tr><td>1</td><td><code>ticker</code> 🔑</td><td>TEXT</td><td>(ticker, collected_at) UNIQUE</td></tr>
           <tr><td>2</td><td><code>trade_date</code> 🔗</td><td>DATE</td><td>분석 기준일(FK). 구 as_of</td></tr>
-          <tr><td>3</td><td><code>collected_at</code> 🔑</td><td>TS</td><td><code>_now()</code> UTC ISO 초. PK</td></tr>
+          <tr><td>3</td><td><code>collected_at</code> 🔑</td><td>TS</td><td><code>_now()</code> UTC ISO 초. (ticker, collected_at) UNIQUE</td></tr>
           <tr><td>4</td><td><code>has_signal</code></td><td>0/1</td><td>analyzed 1건↑이면 1</td></tr>
           <tr style="background:#eaf1ec"><td colspan="4" style="font-weight:700;color:#166534">━ B. 대표 기사 복사 (rep = importance×weight 최상위) ━</td></tr>
           <tr><td>5</td><td><code>news_title</code></td><td>TEXT</td><td>rep.item.title</td></tr>
@@ -493,18 +494,19 @@ check_hard_risk(text):  # text.lower()에서 첫 매치
           <tr><td>16</td><td><code>peak_importance</code></td><td>0~1</td><td>max([importance]+cred_mags). 신뢰검증 기사 중 최댓값(§12)</td></tr>
           <tr><td>17</td><td><code>risk_score</code></td><td>0~1</td><td>Σ(_n10(risk)·w)/tw</td></tr>
           <tr><td>18</td><td><code>sentiment_score</code></td><td>0~1</td><td>강악재(min≤−0.7) 1건이면 최솟값 채택(보수), 아니면 신뢰가중 평균(§12)</td></tr>
-          <tr><td>19</td><td><code>sentiment</code></td><td>TEXT</td><td>sentiment_score에서 파생(라벨↔점수 일치)</td></tr>
-          <tr><td>20</td><td><code>source_trust</code></td><td>0~1</td><td>Σ(trust·w)/tw · LLM·해석·사후</td></tr>
-          <tr><td>21</td><td><code>grade_score</code></td><td>0~1</td><td>Σ(_GRADE_SCORE·w)/tw · 코드·도메인·사전(ALLOW1·GRAY.6·BLOCK0)</td></tr>
-          <tr><td>22</td><td><code>confidence</code></td><td>0~1</td><td>mean(raw_weights) 단순평균 · 낮으면 호재 sentiment 감쇠</td></tr>
+          <tr><td>19</td><td><code>is_positive</code></td><td>INTEGER (0/1)</td><td><code>sentiment_score &gt; 0.5</code>(초과 1=호재, 이하 0). 코드 파생 bool. 2026-07-09 코드리뷰 반영 추가</td></tr>
+          <tr><td>20</td><td><code>sentiment</code></td><td>TEXT</td><td>sentiment_score에서 파생(라벨↔점수 일치)</td></tr>
+          <tr><td>21</td><td><code>source_trust</code></td><td>0~1</td><td>Σ(trust·w)/tw · LLM·해석·사후</td></tr>
+          <tr><td>22</td><td><code>grade_score</code></td><td>0~1</td><td>Σ(_GRADE_SCORE·w)/tw · 코드·도메인·사전(ALLOW1·GRAY.6·BLOCK0)</td></tr>
+          <tr><td>23</td><td><code>confidence</code></td><td>0~1</td><td>mean(raw_weights) 단순평균 · 낮으면 호재 sentiment 감쇠</td></tr>
           <tr style="background:#eaf1ec"><td colspan="4" style="font-weight:700;color:#166534">━ D. 코드 하드 스캔 (어느 기사든 BLOCK류면) ━</td></tr>
-          <tr><td>23</td><td><code>hard_block</code> 🛡️</td><td>0/1</td><td>어느 기사든 final_permission∈{BLOCK_ALL,BLOCK_BUY}이면 1</td></tr>
-          <tr><td>24</td><td><code>hard_block_reason</code></td><td>TEXT</td><td>차단 유발 첫 final_reason</td></tr>
+          <tr><td>24</td><td><code>hard_block</code> 🛡️</td><td>0/1</td><td>어느 기사든 final_permission∈{BLOCK_ALL,BLOCK_BUY}이면 1</td></tr>
+          <tr><td>25</td><td><code>hard_block_reason</code></td><td>TEXT</td><td>차단 유발 첫 final_reason</td></tr>
           <tr style="background:#eaf1ec"><td colspan="4" style="font-weight:700;color:#166534">━ E. 코드 정렬 상위 3 (대표선정과 같은 scored 재사용) ━</td></tr>
-          <tr><td>25</td><td><code>top_evidence</code></td><td>TEXT[] 고정3</td><td>scored 상위3 "{source}: {title[:60]}", 부족분 None</td></tr>
+          <tr><td>26</td><td><code>top_evidence</code></td><td>TEXT[] 고정3</td><td>scored 상위3 "{source}: {title[:60]}", 부족분 None</td></tr>
         </tbody>
       </table>
-      <div class="callout c-info">🆕 <b>disclosure_ref(#10, 2026-07-09 신설).</b> 삭제한 루머/팩트 이진판별 대신 <b>공식 문서 존재 여부</b>로 사실성 보강. NewsBundle 24→25. ❌ 삭제: 구조중복 3(company_name·category·verdict) + 이진판별 4(news_confirmed·news_rumor·confirmed_score·fact_check).</div>
+      <div class="callout c-info">🆕 <b>disclosure_ref(#10, 2026-07-09 신설).</b> 삭제한 루머/팩트 이진판별 대신 <b>공식 문서 존재 여부</b>로 사실성 보강. NewsBundle 24→25→26(is_positive 추가). ❌ 삭제: 구조중복 3(company_name·category·verdict) + 이진판별 4(news_confirmed·news_rumor·confirmed_score·fact_check).</div>
     </div>
   </section>
 
@@ -621,7 +623,7 @@ grade_score = Σ(_GRADE_SCORE[source_grade] · w) / tw   # 신뢰가중 평균</
       <table>
         <thead><tr><th>테이블</th><th>용도</th><th>키·비고</th></tr></thead>
         <tbody>
-          <tr><td><code>tb_disclosure</code> / <code>tb_news</code></td><td><b>Strategist 출력</b>(번들 스냅샷)</td><td>PK=(ticker, collected_at), INSERT OR REPLACE</td></tr>
+          <tr><td><code>tb_disclosure</code> / <code>tb_news</code></td><td><b>Strategist 출력</b>(번들 스냅샷)</td><td>단일 <code>_id</code> AUTOINCREMENT PK + (ticker, collected_at) UNIQUE, INSERT OR REPLACE</td></tr>
           <tr><td><code>disclosure_signals</code></td><td>공시 per-signal 분석 로그</td><td>+ filed_at·certainty·llm/final_permission·return_1d/3d/5d·outcome</td></tr>
           <tr><td><code>news_signals</code></td><td>뉴스 per-signal(드롭 포함)</td><td><code>news_key UNIQUE</code> + INSERT OR IGNORE(재시작 dedup)</td></tr>
           <tr><td><code>processed_filings</code></td><td>증분 판정</td><td>PK=accession(form 무관)</td></tr>
@@ -665,7 +667,7 @@ report.py → 이벤트/센티먼트/출처별 건수·평균수익·적중률</
           <tr><td>저장·백테스트</td><td>app/storage/db.py · app/backtest/{price_data, fill_returns, report}.py</td></tr>
         </tbody>
       </table>
-      <div class="callout c-tip">🌊 본 문서는 <b>2026-07-09 코드 현행</b>과 1:1. 팀 파이프라인 명세 <b>05 공시 · 06 뉴스</b>의 정보분석 파트를 구현 관점에서 상세화한 것이며, tb_disclosure(18)·tb_news(25) 계약은 팀 최최종 명세와 일치한다.</div>
+      <div class="callout c-tip">🌊 본 문서는 <b>2026-07-09 코드 현행</b>과 1:1. 팀 파이프라인 명세 <b>05 공시 · 06 뉴스</b>의 정보분석 파트를 구현 관점에서 상세화한 것이며, tb_disclosure(19)·tb_news(26) 계약은 팀 최최종 명세와 일치한다.</div>
     </div>
     <hr>
     <p style="text-align:center;color:var(--dim);font-size:13px">Quantinue · 공시·뉴스 정보분석 파트 상세명세 · 담당 정창욱 · 팀 여름이었다 🌊</p>

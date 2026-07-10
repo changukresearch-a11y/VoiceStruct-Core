@@ -1,0 +1,325 @@
+<meta charset="utf-8">
+<title>뉴스 집계 공식 완전 해설 — 왜 이렇게 설계했나 · Quantinue</title>
+<style>
+  :root{
+    --bg:#f7f9fb; --card:#ffffff; --ink:#18222c; --sub:#586472; --line:#e4e9f0;
+    --teal:#0e8f84; --tealBg:#e3f5f2; --navy:#2258d6; --navyBg:#ecf1ff;
+    --amber:#b3690a; --amberBg:#fdf1e0; --red:#d5473c; --redBg:#fdecea;
+    --green:#1f8a4c; --greenBg:#e8f6ec; --purple:#6a44c4; --purpleBg:#f0ebfb;
+    --mute:#eef2f6; --code:#0e1726;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Pretendard","Noto Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    line-height:1.85;font-size:16px;word-break:keep-all}
+  .wrap{max-width:880px;margin:0 auto;padding:46px 22px 150px}
+  header.hero{margin-bottom:30px}
+  .kicker{color:var(--teal);font-weight:800;font-size:13px;letter-spacing:.05em}
+  h1{font-size:31px;margin:8px 0 14px;letter-spacing:-.01em;line-height:1.32}
+  .lead{color:var(--sub);font-size:17px}
+  .lead b{color:var(--ink)}
+  .meta{margin-top:14px;font-size:13px;color:var(--sub)}
+  .meta span{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:3px 12px;margin:3px 5px 3px 0}
+  h2{font-size:24px;margin:58px 0 8px;padding-top:16px;border-top:3px solid var(--line);scroll-margin-top:16px}
+  h2 .n{color:var(--teal);font-weight:800}
+  h3{font-size:19px;margin:34px 0 6px}
+  h4{font-size:16px;margin:22px 0 4px;color:var(--ink)}
+  p{margin:12px 0}
+  code{background:var(--mute);padding:1.5px 6px;border-radius:5px;font-size:13px;
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+  em{font-style:normal;background:linear-gradient(transparent 60%,#ffe7a3 60%);padding:0 2px;font-weight:600}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:22px 26px;margin:18px 0;box-shadow:0 1px 2px rgba(30,40,60,.04)}
+  .qbox{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--teal);border-radius:0 14px 14px 0;padding:16px 20px;margin:16px 0}
+  .qbox .q{font-weight:800;color:var(--teal);font-size:15px;display:block;margin-bottom:4px}
+  .why{border-left:5px solid var(--navy);background:var(--navyBg);border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0}
+  .why.amber{border-color:var(--amber);background:var(--amberBg)}
+  .why.red{border-color:var(--red);background:var(--redBg)}
+  .why.green{border-color:var(--green);background:var(--greenBg)}
+  .why .t{font-weight:800;display:block;margin-bottom:2px}
+  .bad{border-left:5px solid var(--red);background:var(--redBg);border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0}
+  .bad .t{font-weight:800;color:var(--red);display:block;margin-bottom:2px}
+  .calc{background:var(--tealBg);border:1px solid #b9e2db;border-radius:10px;padding:13px 17px;margin:14px 0;
+    font-family:"SFMono-Regular",Consolas,monospace;font-size:13.5px;line-height:1.75;overflow-x:auto}
+  .calc b{color:var(--teal);font-family:inherit}
+  pre.fx{background:var(--code);color:#e6edf7;border-radius:10px;padding:15px 17px;margin:12px 0;
+    font-family:"SFMono-Regular",Consolas,monospace;font-size:13px;overflow-x:auto;line-height:1.62;white-space:pre}
+  pre .c{color:#8b98a9} pre .k{color:#7ee787} pre .p{color:#d2a8ff}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--mute);font-weight:800;font-size:13px;color:var(--sub)}
+  td code{font-size:12.5px}
+  .toc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 24px;margin:26px 0}
+  .toc a{color:var(--ink);text-decoration:none;display:block;padding:3.5px 0;font-size:15px}
+  .toc a:hover{color:var(--teal)} .toc .num{color:var(--teal);font-weight:800;display:inline-block;width:2em}
+  .muted{color:var(--sub);font-size:13.5px}
+  ul.clean{list-style:none;padding-left:0} ul.clean li{padding:5px 0 5px 26px;position:relative}
+  ul.clean li::before{content:"▸";position:absolute;left:6px;color:var(--teal);font-weight:800}
+  hr.soft{border:none;border-top:1px dashed var(--line);margin:24px 0}
+  .analogy{background:var(--amberBg);border-radius:12px;padding:14px 18px;margin:16px 0}
+  .analogy .t{font-weight:800;color:var(--amber)}
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <div class="kicker">QUANTINUE · 정보분석(뉴스) · 설계 해설서</div>
+  <h1>뉴스 집계 공식은 왜 이렇게 생겼나<br>— 처음 보는 사람을 위한 완전 해설</h1>
+  <p class="lead">이 문서는 공식을 <b>“외우는”</b> 게 아니라 <b>“왜 이렇게 만들 수밖에 없었는지”</b>를 이해하게 하려고 썼습니다.
+  각 계산값이 <b>어떤 문제를 풀려고 존재하는지</b>, <b>그 방식이 아니었다면 무엇이 잘못됐을지</b>를 하나하나 짚어요.
+  수식을 몰라도 읽을 수 있고, 예시 숫자는 모두 실제 코드로 검증했습니다.</p>
+  <div class="meta"><span>대상: 배경지식 없는 팀원</span><span>초점: 정의 + 설계 이유</span><span>예시: NVDA 3기사</span></div>
+</header>
+
+<div class="toc">
+  <a href="#c1"><span class="num">1.</span>근본 문제 — 왜 “집계”가 필요한가</a>
+  <a href="#c2"><span class="num">2.</span>왜 그냥 평균이면 안 되는가 (설계 철학)</a>
+  <a href="#c3"><span class="num">3.</span>기초 개념 ① — 왜 모든 걸 0~1로 만드나</a>
+  <a href="#c4"><span class="num">4.</span>기초 개념 ② — “무게”라는 발명 (핵심)</a>
+  <a href="#c5"><span class="num">5.</span>기초 개념 ③ — 방향을 점수로, 그것도 비대칭으로</a>
+  <a href="#c6"><span class="num">6.</span>confidence — 근거는 얼마나 두꺼운가</a>
+  <a href="#c7"><span class="num">7.</span>importance — 얼마나 큰 사건인가</a>
+  <a href="#c8"><span class="num">8.</span>peak_importance — 평균이 놓치는 특종 구하기</a>
+  <a href="#c9"><span class="num">9.</span>sentiment_score — 좋은가 나쁜가</a>
+  <a href="#c10"><span class="num">10.</span>risk_score — 위험은 왜 따로 재나</a>
+  <a href="#c11"><span class="num">11.</span>신뢰가 왜 3개나 되나 (source_trust·grade_score·confidence)</a>
+  <a href="#c12"><span class="num">12.</span>전체를 한 번에 — 3기사가 신호가 되기까지</a>
+  <a href="#c13"><span class="num">13.</span>설계 철학 총정리 & 자주 묻는 질문</a>
+</div>
+
+<!-- 1 -->
+<h2 id="c1"><span class="n">1.</span> 근본 문제 — 왜 “집계”가 필요한가</h2>
+<p class="lead" style="font-size:16px">한 회사에 대한 뉴스는 보통 <b>한 건이 아니라 여러 건</b>이 동시에 들어옵니다. 그런데 우리가 전략가에게 넘겨야 하는 건 <em>“이 종목의 뉴스 신호 하나”</em>예요.
+그래서 <b>여러 기사를 하나로 합치는 일</b>이 필요합니다. 이걸 <span style="border-bottom:2px dotted var(--teal);font-weight:600">집계(aggregation)</span>라고 불러요.</p>
+<div class="analogy"><span class="t">🍳 비유</span> — 한 학생에 대해 여러 선생님이 평가를 써냈다고 생각해보세요. 교장선생님은 <b>“이 학생은 결국 어떤가?”</b>를 한 줄로 정리해야 합니다.
+평가마다 신뢰도(경력 많은 담임 vs 처음 본 보결교사)가 다른데, 이걸 어떻게 하나로 합칠까요? 그게 정확히 우리가 푸는 문제예요.</div>
+<p>합치는 대상은 기사마다 이런 정보예요: <b>무슨 사건인지, 좋은지 나쁜지, 얼마나 큰일인지, 위험은 없는지, 얼마나 믿을 만한지</b>. 이 각각을 <b>어떻게 하나의 숫자로 모을 것인가</b>가 이 문서의 주제입니다.</p>
+
+<!-- 2 -->
+<h2 id="c2"><span class="n">2.</span> 왜 그냥 평균이면 안 되는가 (설계 철학)</h2>
+<p>가장 단순한 방법은 <b>그냥 산술평균</b>이겠죠. 기사 3개의 점수를 더해서 3으로 나누기. 그런데 이러면 <b>치명적인 문제</b>가 생깁니다.</p>
+<div class="bad"><span class="t">✗ 단순 평균의 함정</span>
+확인도 안 된 <b>저신뢰 블로그의 자극적인 “대박설!”</b>이, 로이터의 신중한 기사와 <b>똑같은 한 표</b>를 갖게 됩니다.
+루머 몇 개가 진짜 신호를 오염시켜 버려요. 주식에서 이건 곧 <b>손해</b>로 이어집니다.</div>
+<p>그래서 우리 시스템은 두 가지 철학을 공식 전체에 깔아 뒀습니다. 이 두 가지만 이해하면 나머지는 자연스럽게 따라와요.</p>
+<div class="why"><span class="t">철학 ① · “믿을수록 크게”</span>
+모든 집계는 단순 평균이 아니라 <b>신뢰도로 가중한 평균</b>입니다. 믿을 만한 기사는 큰 목소리, 못 믿을 기사는 작은 목소리. 그래서 시끄러운 루머가 결과를 흔들지 못해요.</div>
+<div class="why amber"><span class="t">철학 ② · “가장 보수적으로” (겁쟁이처럼)</span>
+확실하지 않은 <b>좋은 소식은 의심하고</b>, <b>나쁜 소식(경고)은 또렷하게</b> 남깁니다. 좋은 기회를 몇 개 놓치더라도 <b>크게 잃지 않는 것</b>을 우선해요.</div>
+<p>이 두 철학이 <code>무게(가중치)</code>, <code>비대칭 감쇠</code>, <code>강한 악재 우선</code>, <code>신뢰검증 필터</code> 같은 장치로 곳곳에 박혀 있습니다. 이제 하나씩 볼게요.</p>
+
+<h4>이 문서가 계속 쓸 예시</h4>
+<table>
+  <tr><th>기사</th><th>출처</th><th>내용</th><th>강도</th><th>확정?</th><th>매체신뢰</th><th>확신도</th></tr>
+  <tr><td>A1</td><td>Reuters (믿음직)</td><td>큰 공급계약 (호재)</td><td>7/10</td><td>✅</td><td>0.9</td><td>높음</td></tr>
+  <tr><td>A2</td><td>Bloomberg (믿음직)</td><td>등급 상향 (호재)</td><td>5/10</td><td>✅</td><td>0.8</td><td>보통</td></tr>
+  <tr><td>A3</td><td>어느 블로그 (애매)</td><td>“대박 계약설!” (부풀림)</td><td>9/10</td><td>❌ 소문</td><td>0.3</td><td>낮음</td></tr>
+</table>
+<p class="muted">주목: A3가 강도(9)는 제일 높지만 <b>확인 안 된 저신뢰 블로그</b>라는 점. 이 A3가 어떻게 자동으로 힘을 잃는지가 이 문서의 반복 주제입니다.</p>
+
+<!-- 3 -->
+<h2 id="c3"><span class="n">3.</span> 기초 개념 ① — 왜 모든 걸 0~1로 만드나</h2>
+<p>LLM은 보통 <b>“10점 만점에 7점”</b> 식으로 답합니다. 우리는 이걸 전부 <b>0~1 사이 숫자</b>로 바꿔요(7 → 0.7). 이걸 하는 함수가 <code>_n10</code>입니다.</p>
+<pre class="fx">0~1 값 = (0~10 점수를 0~10 범위로 자른 뒤) ÷ 10
+<span class="c"># 7 → 0.7,  9 → 0.9,  13 → 1.0(잘림)</span></pre>
+<div class="qbox"><span class="q">왜 굳이 0~1로 통일하지?</span>
+① <b>서로 곱하고 비교하려면 자가 같아야</b> 합니다. 방향·강도·위험·신뢰를 섞어 계산하는데 어떤 건 0~10, 어떤 건 0~100이면 계산이 엉켜요.
+② <b>0~1은 확률처럼 직관적</b>입니다(0.8 = 80%처럼 읽힘). ③ <b>곱셈에 안전</b>합니다 — 0~1 값끼리 곱해도 결과가 0~1을 벗어나지 않아, 뒤에 나올 “무게 곱하기”가 폭주하지 않아요.</div>
+
+<!-- 4 -->
+<h2 id="c4"><span class="n">4.</span> 기초 개념 ② — “무게”라는 발명 (여기가 핵심)</h2>
+<p>철학 ①(“믿을수록 크게”)을 실현하려면, 먼저 <b>기사마다 “얼마나 믿을 만한가”를 하나의 숫자</b>로 정해야 합니다. 이 숫자를 <span style="border-bottom:2px dotted var(--teal);font-weight:600">무게(weight)</span>라고 부르고, <code>_news_conf</code>가 계산해요.</p>
+<pre class="fx">무게 = 확신도 × 확인계수 × 매체신뢰
+   확신도   : 높음 0.9 / 보통 0.6 / 낮음 0.3   (LLM이 얼마나 단정했나)
+   확인계수 : 확정된 사실 1.0 / 아직 소문 0.5   (사실이냐 루머냐)
+   매체신뢰 : 0~1                              (어느 언론이 썼나)</pre>
+<div class="calc">A1 = 0.9 × 1.0 × 0.9 = <b>0.81</b>   (높은 확신·확정·믿는 매체 → 큰 목소리)
+A2 = 0.6 × 1.0 × 0.8 = <b>0.48</b>
+A3 = 0.3 × 0.5 × 0.3 = <b>0.045</b>  (낮은 확신·소문·애매 매체 → 거의 침묵)</div>
+
+<div class="qbox"><span class="q">왜 하필 이 세 가지를 골랐지?</span>
+“믿을 만하다”는 건 사실 <b>세 개의 독립된 질문</b>이기 때문입니다:
+<ul class="clean" style="margin-top:6px">
+  <li><b>확신도</b> — AI가 이 판단을 얼마나 단정했나? (애매하게 답했으면 낮음)</li>
+  <li><b>확인계수</b> — 이게 확인된 사실인가, 아니면 아직 “~라더라”인가?</li>
+  <li><b>매체신뢰</b> — 누가 한 말인가? 로이터인가 익명 블로그인가?</li>
+</ul>
+이 셋은 서로 다른 걸 재기 때문에, 하나만으로는 신뢰를 대표할 수 없어요.</div>
+
+<div class="qbox"><span class="q">왜 더하지(+) 않고 곱하나(×)?</span> — <b>이게 가장 중요한 설계 결정입니다.</b>
+곱셈은 <b>“그리고(AND)”</b>의 논리예요. <b>확실하고 그리고 확인됐고 그리고 믿을 매체</b>여야 무게가 커집니다. <b>하나라도 낮으면 전체가 확 낮아져요</b>(약한 고리 하나가 전체를 끌어내림).</div>
+<div class="bad"><span class="t">✗ 만약 더했다면(+)?</span>
+A3 같은 기사가 <b>“강도만 자극적으로 높이고”</b> 통과할 수 있습니다. 예를 들어 매체신뢰는 낮아도 확신도만 높으면 합계가 커져서 무게가 붙어버려요.
+곱셈이라서 A3는 <b>0.3 × 0.5 × 0.3 = 0.045</b>로 <em>세 약점이 서로 곱해져</em> 거의 0이 됩니다. 루머가 절대 큰 목소리를 못 내게 하는 안전장치예요.</div>
+<div class="why green"><span class="t">이 무게가 모든 것의 부품</span>
+앞으로 나올 importance·risk·source_trust·grade_score·sentiment가 <b>전부 이 무게를 써서</b> “믿을수록 크게” 평균냅니다. 무게 하나만 제대로 이해하면 나머지는 응용이에요.</div>
+
+<!-- 5 -->
+<h2 id="c5"><span class="n">5.</span> 기초 개념 ③ — 방향을 점수로, 그것도 <b>비대칭</b>으로</h2>
+<p>“좋은 소식이냐 나쁜 소식이냐”를 숫자로 만드는 함수가 <code>_senti_score</code>입니다. 결과는 <b>0(강한 악재) ~ 0.5(중립) ~ 1(강한 호재)</b>.</p>
+<pre class="fx">방향강도 = 부호 × 강도            <span class="c"># 호재 +1, 악재 -1 → 예: 호재 강도0.8 = +0.8</span>
+<span class="p">만약</span> 방향강도가 양수(호재)면:  방향강도 × 확신도   <span class="c"># 호재만 깎음</span>
+점수 = 0.5 + 0.5 × 방향강도</pre>
+<div class="qbox"><span class="q">왜 호재만 깎고(감쇠), 악재는 안 깎나? — “비대칭”</span>
+이게 철학 ②(“가장 보수적으로”)의 정수입니다.
+<ul class="clean" style="margin-top:6px">
+  <li><b>호재는 의심</b>: 근거가 약한(확신도 낮은) 좋은 소식은 점수를 <b>중립(0.5) 쪽으로 깎습니다.</b> 근거 약한 장밋빛 소문에 속아 사는 게 제일 위험하니까요.</li>
+  <li><b>악재는 그대로</b>: 나쁜 소식은 <b>깎지 않습니다.</b> 경고를 흐리면 안 되니까요. 근거가 좀 약해도 위험 신호는 또렷하게 남깁니다.</li>
+</ul></div>
+<div class="calc">악재 예: 방향강도 -0.8 → (악재라 감쇠 없음) → 0.5 + 0.5×(-0.8) = <b>0.1</b>  (또렷한 악재)
+호재 예: 방향강도 +0.8, 확신도 0.45 → 0.8×0.45=0.36 → 0.5+0.18 = <b>0.68</b>  (중립 쪽으로 눌림)</div>
+<p class="muted">같은 크기(0.8)라도 호재는 0.68로 눌리고 악재는 0.1로 세게 남습니다. 이 <b>기울어진 저울</b>이 “겁쟁이 철학”을 숫자로 구현한 거예요.</p>
+
+<!-- 6 -->
+<h2 id="c6"><span class="n">6.</span> confidence — 근거는 얼마나 두꺼운가</h2>
+<div class="qbox"><span class="q">이 값이 답하는 질문</span> “이 신호는 <b>탄탄한 근거로</b> 만들어졌나, 아니면 빈약한 소문 몇 개로 급조됐나?”</div>
+<p>계산은 의외로 단순합니다 — <b>기사들 무게의 (그냥) 평균</b>이에요.</p>
+<pre class="fx">confidence = (모든 기사 무게의 합) ÷ 기사 수</pre>
+<div class="calc">confidence = (0.81 + 0.48 + 0.045) ÷ <b>3</b> = 1.335 ÷ 3 = <b>0.45</b></div>
+<div class="qbox"><span class="q">왜 여기선 “가중평균”이 아니라 “단순평균”이지?</span>
+뒤에 나올 importance는 <b>믿을 만한 기사에 큰 무게</b>를 주는 가중평균인데, confidence는 <b>반대로</b> 모든 기사가 똑같이 한 표를 갖는 단순평균입니다. <b>왜 반대일까요?</b></div>
+<div class="why green"><span class="t">목적이 정반대이기 때문</span>
+confidence는 “근거가 <b>두꺼운지</b>”를 <b>정직하게</b> 드러내야 합니다. 그래서 저신뢰 기사(A3, 무게 0.045)도 <b>온전히 한 표를 행사해서 confidence를 끌어내려야</b> 해요.
+만약 가중평균이었다면 A3가 무시돼서 “근거 얇음”이 사라지고, confidence가 <b>가짜로 높게</b> 나옵니다. 그래서 일부러 단순평균이에요.</div>
+<div class="why amber"><span class="t">보너스 역할 — 브레이크</span>
+confidence는 §5의 호재 감쇠에 <b>다시 들어갑니다.</b> 근거가 얇으면(confidence 낮으면) 호재 점수가 더 세게 눌려요. 즉 confidence는 “근거 두께”를 재는 동시에, <b>약한 근거의 낙관을 억제하는 브레이크</b>이기도 합니다.</div>
+
+<!-- 7 -->
+<h2 id="c7"><span class="n">7.</span> importance — 얼마나 큰 사건인가</h2>
+<div class="qbox"><span class="q">이 값이 답하는 질문</span> “좋고 나쁨을 떠나서, 이게 <b>얼마나 중요한(큰) 사건</b>인가?”</div>
+<p>여기서부터 <b>철학 ①의 가중평균</b>이 등장합니다.</p>
+<pre class="fx">importance = Σ(각 기사 강도 × 그 기사 무게) ÷ 무게 합</pre>
+<div class="calc">강도 = [0.7, 0.5, 0.9],  무게 = [0.81, 0.48, 0.045],  무게합 = 1.335
+importance = (0.7×0.81 + 0.5×0.48 + 0.9×0.045) ÷ 1.335 = 0.8475 ÷ 1.335 = <b>0.63</b></div>
+<div class="why"><span class="t">A3의 강도 0.9는 어디로 갔나?</span>
+A3는 강도가 <b>제일 높지만(0.9)</b> 무게가 0.045라 기여가 0.0405뿐 — 거의 무시됩니다.
+그냥 산술평균이면 (0.7+0.5+0.9)/3 = <b>0.70</b>인데, 신뢰가중은 <b>0.63</b>으로 더 정직하게 낮아요. 과장 기사의 영향력이 죽은 겁니다.</div>
+<div class="qbox"><span class="q">왜 방향(좋고 나쁨)을 안 섞나?</span>
+importance는 <b>순수한 “크기”</b>만 잽니다. 부호(±)를 넣지 않아요. 이유는 <b>상쇄 붕괴</b> 때문입니다.</div>
+<div class="bad"><span class="t">✗ 만약 방향을 섞었다면?</span>
+“엄청 중요한 호재(+9)”와 “엄청 중요한 악재(-9)”가 동시에 있으면, 방향을 섞어 평균낼 때 <b>+9와 -9가 상쇄돼 0</b>이 됩니다.
+결과: “둘 다 초대형 사건인데 중요도 0”이라는 <b>말도 안 되는 값</b>. 그래서 크기(importance)와 방향(sentiment)은 <em>반드시 다른 축으로 분리</em>합니다.</div>
+
+<!-- 8 -->
+<h2 id="c8"><span class="n">8.</span> peak_importance — 평균이 놓치는 특종 구하기</h2>
+<div class="qbox"><span class="q">이 값이 답하는 질문</span> “평균에 <b>묻혀버린, 단 하나의 결정적인 강한 신호</b>가 있지 않나?”</div>
+<div class="bad"><span class="t">✗ 평균(importance)만의 한계</span>
+결정적인 특종 1건(강도 0.9)이 있어도, 밋밋한 기사 여러 개와 평균내면 <b>0.4대로 희석</b>돼 버립니다.
+“평균은 별거 없지만 사실 초대형 신호가 하나 있다”를 평균만으론 절대 알 수 없어요.</div>
+<p>그래서 <b>평균과 별개로 “가장 센 기사 하나”</b>를 따로 챙깁니다. 이게 peak_importance예요. 단, 조건이 있습니다.</p>
+<pre class="fx">신뢰검증 기사 = (확정됨) 또는 (매체신뢰 ≥ 0.6) 또는 (등급 ALLOW)  중 하나
+peak_importance = max( importance, 신뢰검증 기사들의 강도… )</pre>
+<div class="qbox"><span class="q">왜 “신뢰검증된 기사” 중에서만 고르나?</span>
+아무 기사나 peak가 되면, <b>저신뢰 블로그가 강도만 9로 부풀린 A3가 peak를 장악</b>해버립니다. 그럼 “초대형 신뢰 신호가 있다”는 거짓말이 되죠.
+그래서 <b>믿을 만한 기사(A3 제외)</b> 중에서만 최댓값을 뽑습니다.</div>
+<div class="calc">신뢰검증 통과: A1(0.7), A2(0.5)   /   A3(0.9)는 <b>미확정·저신뢰·애매 → 제외</b>
+peak = max(0.63, 0.7, 0.5) = <b>0.70</b>   ← A3의 0.9가 아니라 A1의 0.7</div>
+<div class="why green"><span class="t">왜 importance도 후보에 넣나?</span>
+<code>max(importance, ...)</code>처럼 importance 자신을 후보에 포함시켜서 ① <b>peak는 절대 importance보다 작을 수 없고</b>(항상 ≥), ② 신뢰기사가 하나도 없으면 peak = importance로 얌전히 수렴합니다. <br>
+<code>peak = importance</code>로 나오면? “평균 이상으로 튀는 믿을 만한 단독 신호는 없다”는 뜻이에요.</div>
+<p class="muted">참고: 예전엔 <code>max(모든 기사)</code>라 A3가 가짜 peak(0.9)를 세웠는데, 2026-07-07에 “신뢰기사만” 조건을 넣어 이 편향을 고쳤습니다.</p>
+
+<!-- 9 -->
+<h2 id="c9"><span class="n">9.</span> sentiment_score — 좋은가 나쁜가 (2단 로켓)</h2>
+<div class="qbox"><span class="q">이 값이 답하는 질문</span> “종합적으로 이 뉴스는 <b>호재인가 악재인가</b>, 얼마나 세게?”</div>
+<p>이건 <b>두 단계</b>로 계산합니다. 방향을 먼저 모으고(1층), 그걸 0~1로 옮기며 감쇠(2층).</p>
+<h4>1층 · 방향을 모은다 (+ 강한 악재 우선 예외)</h4>
+<pre class="fx">각 기사 방향값 = 강도 × 부호        <span class="c"># 호재 +, 악재 - → 범위 -1~+1</span>
+<span class="p">만약</span> 가장 나쁜 기사가 -0.7 이하로 아주 나쁘면:
+    → 평균 대신 <b>그 최악값</b>을 채택          <span class="c"># 강한 악재 우선</span>
+<span class="p">아니면</span>:
+    → 방향값들의 <b>가중평균</b> (믿을수록 크게)</pre>
+<div class="qbox"><span class="q">왜 강한 악재는 “평균”이 아니라 “최악값”을 쓰나?</span>
+철학 ②(보수). 치명적인 경고 1건이 다른 좋은 소식들과 <b>평균내며 물타기되면</b> 위험합니다.
+예: “상장폐지 통지(초대형 악재)” 하나가 자잘한 호재 5개에 희석돼 “중립”이 되면 큰일 나죠. 그래서 <b>가장 나쁜 놈이 아주 나쁘면 그놈을 그대로 채택</b>합니다.</div>
+<h4>2층 · 0~1로 옮기며 호재만 감쇠</h4>
+<pre class="fx">sentiment_score = 0.5 + 0.5 × 방향집계값   <span class="c"># 단, 호재면 먼저 ×확신도</span></pre>
+<div class="calc">방향값 = [+0.7, +0.5, +0.9] (전부 호재), 가장 나쁜 게 +0.5라 예외 미발동
+1층 가중평균 = (0.7×0.81 + 0.5×0.48 + 0.9×0.045) ÷ 1.335 = <b>0.635</b>
+2층: 호재라 ×확신도(0.45) → 0.286 → 0.5 + 0.5×0.286 = <b>0.64</b></div>
+<div class="why"><span class="t">importance(0.63)랑 왜 비슷하지? — 우연입니다</span>
+이 예제는 세 기사가 <b>전부 호재</b>라, 방향값(부호 +)이 강도와 사실상 같아서 숫자가 겹쳐 보입니다.
+하지만 개념은 완전히 달라요: importance는 <b>부호 없는 크기</b>, sentiment는 <b>부호 있는 방향</b> + 매핑 + 감쇠. 호재·악재가 섞이면 둘은 확 벌어집니다.</div>
+<h4>덤 · 라벨(sentiment)과 is_positive</h4>
+<p>사람이 읽기 쉽게 점수에서 <b>라벨</b>을 뽑습니다: <code>positive/negative/neutral</code>, 그리고 호재·악재가 <b>둘 다 유의미하면 mixed</b>. <code>is_positive</code>는 <code>점수 &gt; 0.5</code>인지의 참/거짓이에요. 라벨을 <b>최종 점수에서</b> 뽑기 때문에 “점수는 0.4인데 라벨은 호재” 같은 모순이 없습니다.</p>
+
+<!-- 10 -->
+<h2 id="c10"><span class="n">10.</span> risk_score — 위험은 왜 따로 재나</h2>
+<div class="qbox"><span class="q">이 값이 답하는 질문</span> “좋고 나쁨과 별개로, <b>손해 볼 하방 위험</b>이 얼마나 도사리고 있나?”</div>
+<pre class="fx">risk_score = Σ(각 기사 위험 × 무게) ÷ 무게 합    <span class="c"># importance와 같은 가중평균</span></pre>
+<div class="calc">위험 = [0.1, 0, 0] (A1만 위험 언급)
+risk_score = (0.1×0.81 + 0 + 0) ÷ 1.335 = <b>0.06</b></div>
+<div class="qbox"><span class="q">이미 sentiment_score가 있는데 위험을 왜 또 재나?</span>
+<b>좋은 소식인데 동시에 위험할 수 있기 때문</b>입니다. 예: “대형 인수 발표(호재)”지만 “규제 승인 불확실(위험)”. 이러면 sentiment는 높고 risk도 높아요.
+방향과 위험은 다른 질문이라, 전략가가 <b>리스크 관리</b>를 하려면 따로 봐야 합니다.</div>
+<div class="why amber"><span class="t"><code>risk_score</code> ≠ <code>hard_block</code> 주의</span>
+risk_score는 <b>0~1 참고 강도</b>(위험이 이 정도 있다)이고, hard_block은 <b>0/1 즉시 차단 스위치</b>(상폐·거래정지처럼 무조건 매수 금지)입니다. risk가 0.9라도 자동 차단은 아니에요 — 차단은 hard_block이 담당.</div>
+
+<!-- 11 -->
+<h2 id="c11"><span class="n">11.</span> 신뢰가 왜 3개나 되나</h2>
+<p>이게 팀원들이 제일 많이 묻는 질문입니다. <code>confidence</code>·<code>source_trust</code>·<code>grade_score</code> — “다 신뢰 아냐?” 싶지만 <b>서로 완전히 다른 걸 재고, 일부러 나눴습니다.</b></p>
+<table>
+  <tr><th>이름</th><th>재는 것</th><th>누가 매기나</th><th>계산</th></tr>
+  <tr><td><code>confidence</code></td><td>근거가 <b>두꺼운가</b></td><td>무게에서 (⚙️)</td><td>무게의 <b>단순</b>평균</td></tr>
+  <tr><td><code>source_trust</code></td><td>매체가 믿을 만한가 (<b>내용</b> 기준)</td><td>🤖 LLM (읽어보고)</td><td>가중평균</td></tr>
+  <tr><td><code>grade_score</code></td><td>매체가 믿을 만한가 (<b>도메인</b> 기준)</td><td>⚙️ 코드 (주소만 보고)</td><td>가중평균</td></tr>
+</table>
+<h4>source_trust와 grade_score는 왜 둘 다?</h4>
+<div class="calc">source_trust = (0.9×0.81 + 0.8×0.48 + 0.3×0.045) ÷ 1.335 = <b>0.84</b>   <span style="color:var(--sub)"># LLM: 로이터라도 0.9로 신중</span>
+grade_score  = (1.0×0.81 + 1.0×0.48 + 0.6×0.045) ÷ 1.335 = <b>0.99</b>   <span style="color:var(--sub)"># 코드: ALLOW면 무조건 1.0</span></div>
+<div class="why green"><span class="t">이중 교차검증 (감사)</span>
+<b>LLM 판단(source_trust)</b>과 <b>기계적 규칙(grade_score)</b>을 독립으로 둬서 서로를 검사하게 합니다:
+<ul class="clean" style="margin-top:6px">
+  <li>잘 쓴 <b>가짜뉴스에 LLM이 속아도</b> → grade_score가 그 도메인을 애매(GRAY)/차단(BLOCK)으로 잡아냄.</li>
+  <li>신뢰 매체가 <b>이상한 기사를 내면</b> → source_trust가 낮게 나와 잡아냄.</li>
+</ul>
+하나가 뚫려도 다른 하나가 막는 <b>이중 안전망</b>입니다. 그래서 겹쳐 보여도 안 합쳐요.</div>
+<div class="qbox"><span class="q">그럼 confidence는?</span>
+앞의 둘이 “매체가 믿을 만한가”라면, confidence는 “<b>근거가 두꺼운가</b>”로 질문 자체가 달라요. 게다가 유일하게 <b>단순평균</b>이라, 약한 기사도 정직하게 반영됩니다(§6).</div>
+<p class="muted">전략가에게 나가는 신뢰는 <code>source_trust</code>(이름은 <code>trust_score</code>로) 하나뿐. grade_score·confidence는 내부 감사·계산용입니다.</p>
+
+<!-- 12 -->
+<h2 id="c12"><span class="n">12.</span> 전체를 한 번에 — 3기사가 신호가 되기까지</h2>
+<p>지금까지의 모든 계산을 모으면, NVDA 3기사는 이런 하나의 신호가 됩니다.</p>
+<table>
+  <tr><th>결과값</th><th>값</th><th>의미</th></tr>
+  <tr><td>news_count</td><td>3</td><td>기사 3건</td></tr>
+  <tr><td>confidence</td><td>0.45</td><td>근거는 중간 두께 (A3가 끌어내림)</td></tr>
+  <tr><td>importance</td><td>0.63</td><td>중간 강도의 사건</td></tr>
+  <tr><td>peak_importance</td><td>0.70</td><td>믿을 만한 것 중 더 센 게 하나 있음</td></tr>
+  <tr><td>sentiment_score</td><td>0.64</td><td>완만한 호재 (확신도로 눌림)</td></tr>
+  <tr><td>risk_score</td><td>0.06</td><td>하방 위험 거의 없음</td></tr>
+  <tr><td>source_trust</td><td>0.84</td><td>매체 신뢰 높음 (LLM)</td></tr>
+  <tr><td>grade_score</td><td>0.99</td><td>도메인 등급 최상 (코드)</td></tr>
+  <tr><td>event_type</td><td>product_deal</td><td>대표 기사(A1)의 유형</td></tr>
+</table>
+<div class="why red"><span class="t">A3(“대박설!”)의 최후</span>
+강도 9로 제일 시끄러웠지만 — 미확정·저신뢰·애매 매체라 무게가 0.045로 쪼그라들어서
+❶ 평균을 거의 못 움직이고 ❷ peak 후보에서 잘리고 ❸ 대표 기사도 못 됐습니다.
+<b>모든 공식이 한 방향(“믿을수록 크게”)을 가리키기 때문에, 과장 루머가 자동으로 무력화</b>됩니다. 이게 이 설계의 목적이에요.</div>
+
+<!-- 13 -->
+<h2 id="c13"><span class="n">13.</span> 설계 철학 총정리 & 자주 묻는 질문</h2>
+<h4>한 장으로 보는 설계 원리</h4>
+<table>
+  <tr><th>장치</th><th>무엇을 막나 / 이루나</th></tr>
+  <tr><td><b>무게 = 곱셈(AND)</b></td><td>약점 하나만 있어도 무게 급감 → 루머가 큰 목소리 못 냄</td></tr>
+  <tr><td><b>가중평균(강도·위험·신뢰)</b></td><td>믿을 만한 기사가 주도 → 과장이 결과를 흔들지 못함</td></tr>
+  <tr><td><b>단순평균(confidence)</b></td><td>약한 기사도 정직하게 반영 → “근거 얇음”을 숨기지 않음</td></tr>
+  <tr><td><b>호재만 감쇠(비대칭)</b></td><td>근거 약한 낙관은 억제, 경고는 또렷 → 손실 회피 우선</td></tr>
+  <tr><td><b>강한 악재 우선</b></td><td>치명적 경고가 호재에 물타기되지 않음</td></tr>
+  <tr><td><b>peak = 신뢰기사 max</b></td><td>희석된 특종을 살리되, 저신뢰 과장의 가짜 특종은 배제</td></tr>
+  <tr><td><b>신뢰 3분할(LLM·코드·근거)</b></td><td>서로 교차검증 → 하나가 속아도 다른 하나가 잡음</td></tr>
+</table>
+<p class="muted">모든 장치가 두 철학 — <b>“믿을수록 크게”</b>와 <b>“가장 보수적으로(겁쟁이처럼)”</b> — 로 수렴합니다.</p>
+
+<h4>자주 묻는 질문</h4>
+<div class="qbox"><span class="q">Q. 왜 이렇게 복잡하게 만들었나? 그냥 평균 안 되나?</span>
+단순 평균은 <b>루머 몇 개에 오염</b>됩니다(§2). 주식에서 잘못된 신호는 곧 손해라, “정확하고 보수적인” 신호를 위해 이 복잡성을 감수한 거예요. 대신 복잡성은 <b>이 문서 하나로 이해 가능한 수준</b>으로 억제했습니다.</div>
+<div class="qbox"><span class="q">Q. 저신뢰 기사를 아예 버리면 안 되나?</span>
+완전히 버리는 대신 <b>무게를 아주 작게</b> 줍니다. 그래야 confidence가 “근거 얇음”을 정직하게 낮게 반영할 수 있어요. 아예 버리면 그 사실이 사라집니다. (단, 명백한 노이즈·차단 도메인은 AI를 부르기 전 사전필터에서 제거해요.)</div>
+<div class="qbox"><span class="q">Q. 이 값들이 전부 전략가에게 가나?</span>
+아니요. 전략가에겐 <b>핵심 10개</b>만 압축해 전달합니다(<code>has_signal·article_count·event_type·importance·peak·sentiment·risk·trust·hard_block·summary</code>). confidence·grade_score 등은 저장(감사·근거추적)용이에요.</div>
+
+<hr class="soft">
+<p class="muted">📌 압축 레퍼런스는 <a href="뉴스_집계공식_상세+예시_팀공유.html">「뉴스 집계 공식 상세 + 예시」</a>, 컬럼 개요는 <a href="뉴스_컬럼_쉽게_이해하기_팀공유.html">「뉴스 컬럼 완전 가이드」</a>, 공시 쪽은 <a href="공시_컬럼_완전가이드_팀공유.html">「공시 완전 가이드」</a>, 전 컬럼 사전은 <a href="공시·뉴스_전체컬럼_상세사전_팀공유.html">「전체 컬럼 상세 사전」</a>.</p>
+<p class="muted">근거: <code>app/common/analysis_bundle.py</code>(<code>build_news_bundle·_news_conf·_senti_score·_news_credible</code>). 모든 예시 수치는 동일 3기사 데이터로 코드 실행해 검증했습니다.</p>
+</div>

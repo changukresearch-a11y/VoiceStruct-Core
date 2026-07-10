@@ -117,7 +117,10 @@ def pack_news_signal(d: dict) -> dict:
 # ── 공시 결과 (단독) ─────────────────────────────────────
 
 class DisclosureBundle(BaseModel):
-    """공시 분석 결과 — 종목당 1개 스냅샷, 뉴스와 완전 분리. 18필드(명세 수용)."""
+    """공시 분석 결과 — 종목당 1개 스냅샷, 뉴스와 완전 분리. 19필드.
+
+    필드 수 = 팀 명세 18 + is_positive(리뷰 반영 파생, sentiment_score>0.5). tb_disclosure 컬럼과 1:1.
+    """
     # 종목 식별
     ticker: str
     trade_date: str                       # 분석 기준일(FK→tb_daily_pick), 구 as_of
@@ -169,14 +172,17 @@ class DisclosureBundle(BaseModel):
         return "\n".join(lines)
 
     def to_strategist_signal(self) -> dict:
-        """공시 압축 신호(dict). 저장 상세 18/19필드 → 판단용 핵심만."""
+        """공시 압축 신호(dict). 저장 상세 19필드 → 판단용 핵심 7필드만."""
         return pack_disclosure_signal(self.model_dump())
 
 
 # ── 뉴스 결과 (단독) ─────────────────────────────────────
 
 class NewsBundle(BaseModel):
-    """뉴스 분석 결과 — 종목당 1개 스냅샷, 공시와 완전 분리. 24+1필드(명세 최최종 2026-07-09).
+    """뉴스 분석 결과 — 종목당 1개 스냅샷, 공시와 완전 분리. 26필드.
+
+    필드 수 = 팀 명세 최최종(2026-07-09) 25(뉴스24 + disclosure_ref) + is_positive(리뷰 반영 파생).
+    tb_news 컬럼과 1:1.
 
     루머/팩트 이진판별 4필드(news_confirmed·news_rumor·confirmed_score·fact_check)는
     "확정이냐 루머냐를 LLM이 무 자르듯 판별하기 어렵다"는 팀 결정으로 제거. 신뢰도는

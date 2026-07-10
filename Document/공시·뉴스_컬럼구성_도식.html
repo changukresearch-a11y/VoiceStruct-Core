@@ -106,15 +106,15 @@
     <nav id="toc">
       <a href="#big">전체 흐름 한눈에</a>
       <a href="#legend">도식 읽는 법</a>
-      <div class="grp">📄 tb_disclosure (18)</div>
+      <div class="grp">📄 tb_disclosure (19)</div>
       <a href="#d-meta">메타·원문 (1~7)</a>
-      <a href="#d-signal">신호 점수 (8~14)</a>
-      <a href="#d-safe">안전·요약 (15~18)</a>
-      <div class="grp">📰 tb_news (25)</div>
+      <a href="#d-signal">신호 점수 (8~15)</a>
+      <a href="#d-safe">안전·요약 (16~19)</a>
+      <div class="grp">📰 tb_news (26)</div>
       <a href="#n-meta">메타 (1~4)</a>
       <a href="#n-rep">대표 기사 복사 (5~13)</a>
-      <a href="#n-agg">신뢰가중 집계 (14~22)</a>
-      <a href="#n-safe">하드·근거 (23~25)</a>
+      <a href="#n-agg">신뢰가중 집계 (14~23)</a>
+      <a href="#n-safe">하드·근거 (24~26)</a>
       <div class="grp">🔬 집계 심화</div>
       <a href="#fanin">여러 기사 → 한 값</a>
     </nav>
@@ -126,7 +126,7 @@
     <div class="badges">
       <span class="badge" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;font-weight:700">🔀 컬럼 구성 도식</span>
       <span class="badge">원천 ▶ 처리 ▶ 값</span>
-      <span class="badge">tb_disclosure 18 · tb_news 25</span>
+      <span class="badge">tb_disclosure 19 · tb_news 26</span>
       <span class="badge">실제 코드 1:1</span>
     </div>
     <h1>공시·뉴스 <span class="grad">컬럼값 구성 도식</span></h1>
@@ -157,8 +157,8 @@
         <div class="bar">▶</div>
         <div class="band">
           <div class="bttl">산출 (완성품)</div>
-          <div class="bnode" style="background:var(--blue-bg);border-color:#bfdbfe;color:var(--blue-d)">📄 tb_disclosure<small style="display:block;font-weight:500">공시 18컬럼</small></div>
-          <div class="bnode" style="background:var(--teal-bg);border-color:#99f6e4;color:var(--teal)">📰 tb_news<small style="display:block;font-weight:500">뉴스 25컬럼</small></div>
+          <div class="bnode" style="background:var(--blue-bg);border-color:#bfdbfe;color:var(--blue-d)">📄 tb_disclosure<small style="display:block;font-weight:500">공시 19컬럼</small></div>
+          <div class="bnode" style="background:var(--teal-bg);border-color:#99f6e4;color:var(--teal)">📰 tb_news<small style="display:block;font-weight:500">뉴스 26컬럼</small></div>
           <div class="bnode" style="background:var(--green-bg);border-color:#bbf7d0;color:var(--green-d)">→ 🧠 Strategist<small style="display:block;font-weight:500">최신 행 읽음</small></div>
         </div>
       </div></div>
@@ -190,11 +190,11 @@
     <p class="lead">종목·시각은 시스템이, 원문 식별값은 SEC가 <b>그대로</b> 넣는다(계산 없음).</p>
     <div class="card">
       <div class="crow">
-        <div class="cname"><span class="cno">1</span>ticker <span class="cty">TEXT · PK</span><span class="cdesc">종목 심볼</span></div>
+        <div class="cname"><span class="cno">1</span>ticker <span class="cty">TEXT · UNIQUE</span><span class="cdesc">종목 심볼 · _id AUTOINCREMENT가 단일 PK, (ticker, collected_at)는 UNIQUE</span></div>
         <div class="dwrap"><div class="dgm"><span class="nd s-sys">🕐 입력 ticker</span><span class="ar">▶</span><span class="nd p-proc">대문자로</span><span class="ar">▶</span><span class="nd p-out">NVDA</span></div></div>
       </div>
       <div class="crow">
-        <div class="cname"><span class="cno">2</span>collected_at <span class="cty">TIMESTAMP · PK</span><span class="cdesc">이 행을 만든 시각</span></div>
+        <div class="cname"><span class="cno">2</span>collected_at <span class="cty">TIMESTAMP · UNIQUE</span><span class="cdesc">이 행을 만든 시각 · (ticker, collected_at) UNIQUE</span></div>
         <div class="dwrap"><div class="dgm"><span class="nd s-sys">🕐 지금 시각</span><span class="ar">▶</span><span class="nd p-proc">UTC·초 단위 기록</span><span class="ar">▶</span><span class="nd p-out">2026-07-02T10:05:00Z</span></div></div>
       </div>
       <div class="crow">
@@ -215,7 +215,7 @@
 
   <!-- ═══════════ 공시 신호 ═══════════ -->
   <section id="d-signal">
-    <h2><span class="n disc">📄</span> tb_disclosure — 신호 점수 (8~14)</h2>
+    <h2><span class="n disc">📄</span> tb_disclosure — 신호 점수 (8~15)</h2>
     <p class="lead">AI(LLM)가 0~10으로 매긴 값을 코드가 0~1로 바꾸고, 방향·강도·확신을 조합해 결정한다.</p>
     <div class="card">
       <div class="crow">
@@ -245,7 +245,12 @@
         <div class="eg">💡 <b>왜 감쇠?</b> 근거가 약한 낙관(확신 낮음)은 덜 단정하려고 호재만 중립(0.5)쪽으로 당긴다. <b>악재는 감쇠 안 함</b>(경고를 흐리지 않으려고 — 안전 우선).</div>
       </div>
       <div class="crow">
-        <div class="cname"><span class="cno">11·17·18</span>reason · summary · keywords <span class="cty">TEXT</span><span class="cdesc">근거·요약·키워드</span></div>
+        <div class="cname"><span class="cno">11</span>is_positive <span class="cty">0/1</span><span class="cdesc">호재냐(1)/아니냐(0) — bool 파생</span></div>
+        <div class="dwrap"><div class="dgm"><span class="nd s-code">⚙️ sentiment_score 0.82</span><span class="ar">▶</span><span class="nd p-proc">0.5 초과면 1 · 이하면 0<br>(sentiment_score &gt; 0.5)</span><span class="ar">▶</span><span class="nd p-out">1 = 호재</span></div></div>
+        <div class="eg">💡 2026-07-09 코드리뷰 반영으로 추가된 <b>코드 파생</b> 필드. <code>sentiment_score &gt; 0.5</code>면 1(호재), 이하면 0.</div>
+      </div>
+      <div class="crow">
+        <div class="cname"><span class="cno">12·18·19</span>reason · summary · keywords <span class="cty">TEXT</span><span class="cdesc">근거·요약·키워드</span></div>
         <div class="dwrap"><div class="dgm"><span class="nd s-llm">🤖 LLM 생성 텍스트</span><span class="ar">▶</span><span class="nd p-proc">그대로</span><span class="ar">▶</span><span class="nd p-out">"Revenue +16% YoY" 등</span></div></div>
       </div>
       <div class="crow">
@@ -261,10 +266,10 @@
 
   <!-- ═══════════ 공시 안전 ═══════════ -->
   <section id="d-safe">
-    <h2><span class="n disc">📄</span> tb_disclosure — 안전장치 (15~16)</h2>
+    <h2><span class="n disc">📄</span> tb_disclosure — 안전장치 (16~17)</h2>
     <div class="card">
       <div class="crow">
-        <div class="cname"><span class="cno">15·16</span>hard_block · hard_block_reason <span class="cty">0/1 · TEXT 🛡️</span><span class="cdesc">매수 즉시 차단</span></div>
+        <div class="cname"><span class="cno">16·17</span>hard_block · hard_block_reason <span class="cty">0/1 · TEXT 🛡️</span><span class="cdesc">매수 즉시 차단</span></div>
         <div class="dwrap"><div class="dgm">
           <span class="stack"><span class="nd s-sec">🏛 파산·상폐·거래정지 감지</span><span class="nd s-code">⚙️ 오늘 공시 중 하나라도 차단?</span></span>
           <span class="ar">▶</span><span class="nd p-proc">하나라도 위험이면 1 (OR)</span><span class="ar">▶</span><span class="nd p-out warnv">1 = 매수 금지</span>
@@ -322,7 +327,7 @@
 
   <!-- ═══════════ 뉴스 집계 ═══════════ -->
   <section id="n-agg">
-    <h2><span class="n news">📰</span> tb_news — 여러 기사를 하나로 (14~22)</h2>
+    <h2><span class="n news">📰</span> tb_news — 여러 기사를 하나로 (14~23)</h2>
     <p class="lead">대표 1건이 아니라 <b>오늘 기사 전체</b>를, <b>믿을수록 무겁게(신뢰가중)</b> 평균낸다.</p>
     <div class="card">
       <div class="crow">
@@ -353,16 +358,21 @@
         <div class="eg">💡 감쇠 없으면 0.83인데, <b>루머가 섞여 확신이 낮아(0.54)</b> 0.68로 눌림 → "호재긴 한데 덜 단정".</div>
       </div>
       <div class="crow">
-        <div class="cname"><span class="cno">19</span>sentiment <span class="cty">라벨</span><span class="cdesc">호재/악재/중립/혼재 (라벨)</span></div>
+        <div class="cname"><span class="cno">19</span>is_positive <span class="cty">0/1</span><span class="cdesc">호재냐(1)/아니냐(0) — bool 파생</span></div>
+        <div class="dwrap"><div class="dgm"><span class="nd s-code">⚙️ sentiment_score 0.68</span><span class="ar">▶</span><span class="nd p-proc">0.5 초과면 1 · 이하면 0<br>(sentiment_score &gt; 0.5)</span><span class="ar">▶</span><span class="nd p-out">1 = 호재</span></div></div>
+        <div class="eg">💡 2026-07-09 코드리뷰 반영으로 추가된 <b>코드 파생</b> 필드. <code>sentiment_score &gt; 0.5</code>면 1(호재), 이하면 0.</div>
+      </div>
+      <div class="crow">
+        <div class="cname"><span class="cno">20</span>sentiment <span class="cty">라벨</span><span class="cdesc">호재/악재/중립/혼재 (라벨)</span></div>
         <div class="dwrap"><div class="dgm"><span class="nd s-code">⚙️ 점수 0.68</span><span class="ar">▶</span><span class="nd p-proc">0.5보다 크면 호재<br>(호·악재 둘다 크면 mixed)</span><span class="ar">▶</span><span class="nd p-out">positive</span></div></div>
         <div class="eg">💡 <b>라벨은 항상 점수에서 나온다</b> → 라벨과 점수가 어긋나지 않음.</div>
       </div>
       <div class="crow">
-        <div class="cname"><span class="cno">17·20</span>risk_score · source_trust <span class="cty">0~1</span><span class="cdesc">전체 위험도 · AI가 본 출처신뢰</span></div>
+        <div class="cname"><span class="cno">17·21</span>risk_score · source_trust <span class="cty">0~1</span><span class="cdesc">전체 위험도 · AI가 본 출처신뢰</span></div>
         <div class="dwrap"><div class="dgm"><span class="nd s-rss">ⓐⓑⓒ 각 값</span><span class="ar">▶</span><span class="nd p-proc">신뢰가중 평균</span><span class="ar">▶</span><span class="nd p-out">위험 0.10 · 신뢰 0.86</span></div></div>
       </div>
       <div class="crow">
-        <div class="cname"><span class="cno">21</span>grade_score <span class="cty">0~1</span><span class="cdesc">출처 등급 (코드가 도메인만 보고)</span></div>
+        <div class="cname"><span class="cno">22</span>grade_score <span class="cty">0~1</span><span class="cdesc">출처 등급 (코드가 도메인만 보고)</span></div>
         <div class="dwrap"><div class="dgm">
           <span class="stack"><span class="nd s-code">ⓐ reuters=ALLOW→1.0</span><span class="nd s-code">ⓑ cnbc=ALLOW→1.0</span><span class="nd s-code">ⓒ 블로그=GRAY→0.6</span></span>
           <span class="ar">▶</span><span class="nd p-proc">신뢰가중 평균</span><span class="ar">▶</span><span class="nd p-out">0.99</span>
@@ -370,7 +380,7 @@
         <div class="eg">💡 <b>grade_score(코드·도메인·사전)</b> vs <b>source_trust(AI가 내용까지 보고·사후)</b> — 두 신뢰를 <b>별개 축</b>으로 둬 이중 방어.</div>
       </div>
       <div class="crow">
-        <div class="cname"><span class="cno">22</span>confidence <span class="cty">0~1</span><span class="cdesc">이 종목 신호 전체를 믿을 만한가</span></div>
+        <div class="cname"><span class="cno">23</span>confidence <span class="cty">0~1</span><span class="cdesc">이 종목 신호 전체를 믿을 만한가</span></div>
         <div class="dwrap"><div class="dgm"><span class="nd s-code">각 기사 신뢰 0.81·0.77·0.05</span><span class="ar">▶</span><span class="nd p-proc">단순 평균</span><span class="ar">▶</span><span class="nd p-out">0.54</span></div></div>
         <div class="eg">💡 저신뢰 루머(0.05)가 끼면 낮아진다 → 위 sentiment_score 감쇠에 재사용.</div>
       </div>
@@ -379,14 +389,14 @@
 
   <!-- ═══════════ 뉴스 하드/근거 ═══════════ -->
   <section id="n-safe">
-    <h2><span class="n news">📰</span> tb_news — 안전·근거 (23~25)</h2>
+    <h2><span class="n news">📰</span> tb_news — 안전·근거 (24~26)</h2>
     <div class="card">
       <div class="crow">
-        <div class="cname"><span class="cno">23·24</span>hard_block · hard_block_reason <span class="cty">0/1 · TEXT 🛡️</span><span class="cdesc">매수 즉시 차단</span></div>
+        <div class="cname"><span class="cno">24·25</span>hard_block · hard_block_reason <span class="cty">0/1 · TEXT 🛡️</span><span class="cdesc">매수 즉시 차단</span></div>
         <div class="dwrap"><div class="dgm"><span class="nd s-code">⚙️ 어느 기사든 파산·상폐 감지?</span><span class="ar">▶</span><span class="nd p-proc">하나라도 위험이면 1 (OR)</span><span class="ar">▶</span><span class="nd p-out">0 (없음)</span></div></div>
       </div>
       <div class="crow">
-        <div class="cname"><span class="cno">25</span>top_evidence <span class="cty">TEXT[] 고정3</span><span class="cdesc">근거 헤드라인 3개</span></div>
+        <div class="cname"><span class="cno">26</span>top_evidence <span class="cty">TEXT[] 고정3</span><span class="cdesc">근거 헤드라인 3개</span></div>
         <div class="dwrap"><div class="dgm"><span class="nd s-code">⚙️ 중요×신뢰 정렬 상위 3</span><span class="ar">▶</span><span class="nd p-proc">"출처: 제목" 3칸<br>(부족하면 빈칸)</span><span class="ar">▶</span><span class="nd p-out">[로이터: …, CNBC: …, 빈칸]</span></div></div>
         <div class="eg">💡 대표 1건만이 아니라 <b>상위 3개 헤드라인</b>을 함께 줘서 Strategist가 여러 출처를 비교 판단.</div>
       </div>
