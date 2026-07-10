@@ -18,8 +18,11 @@
 - keywords: 핵심 키워드 5개(영어; 종목·이벤트·수치·회사명 등). 짧은 단어/구.
 - verdict: 검증 결과 한 문장(영어). **맨 앞에 'Bullish'/'Bearish'/'Neutral'을 명시**하고
   근거 요지를 덧붙인다. 예: "Bullish — large all-cash acquisition, near-term upside likely (high trust)."
+- importance_reason: importance 점수가 이 값인 이유를 **한 문장**(영어). 예: "Large all-cash M&A → high near-term impact."
+- sentiment_reason: sentiment(방향) 점수 근거 **한 문장**(영어). 예: "Accretive acquisition at a premium signals upside."
+- risk_reason: risk 점수 근거 **한 문장**(영어). 예: "Regulatory approval still pending adds moderate downside."
 
-★ 출력 언어: **summary·keywords·verdict·reason·evidence_quotes는 모두 영어로** 쓴다
+★ 출력 언어: **summary·keywords·verdict·reason·evidence_quotes·importance_reason·sentiment_reason·risk_reason은 모두 영어로** 쓴다
   (전략가(Strategist) 에이전트가 영어로 읽는다). 나머지 enum 필드는 스키마 값 그대로.
 
 확실하지 않으면 sentiment=neutral, certainty_level=Low, trade_permission=WATCH_ONLY,

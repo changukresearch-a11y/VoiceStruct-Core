@@ -78,6 +78,13 @@ class DisclosureSignal(BaseModel):
     reason: str = Field(
         ...,
         description="한 줄 핵심 근거. 가능하면 수치(프리미엄%·EPS·증자규모 등) 포함.")
+    # 점수별 근거 (전략가 전달용, 각 한 문장·영어)
+    importance_reason: str = Field(
+        "", description="importance 점수가 이 값인 이유를 한 문장으로(영어).")
+    sentiment_reason: str = Field(
+        "", description="sentiment(방향) 점수가 이 값인 이유를 한 문장으로(영어).")
+    risk_reason: str = Field(
+        "", description="risk 점수가 이 값인 이유를 한 문장으로(영어).")
     evidence_quotes: list[str] = Field(
         default_factory=list,
         description="판단 근거가 된 공시 원문의 짧은 인용 (환각 방지용).")

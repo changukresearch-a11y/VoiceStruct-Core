@@ -77,3 +77,9 @@ class NewsOverview(BaseModel):
                          "실적)을 밝히고 종합 방향(bullish/bearish/mixed)을 명시. 영어로.")
     keywords: list[str] = Field(
         default_factory=list, description="묶음 전체를 대표하는 핵심 키워드 5개. 영어로.")
+    # 집계 점수별 근거 (전략가 전달용, 각 한 문장·영어). 입력에 주어진 점수값을 기사들로 설명.
+    importance_reason: str = Field("", description="importance_score 근거 한 문장(영어).")
+    peak_importance_reason: str = Field("", description="peak_importance_score 근거 한 문장(영어).")
+    sentiment_reason: str = Field("", description="sentiment_score(방향) 근거 한 문장(영어).")
+    risk_reason: str = Field("", description="risk_score 근거 한 문장(영어).")
+    trust_reason: str = Field("", description="trust_score(매체 신뢰) 근거 한 문장(영어).")

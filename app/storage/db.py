@@ -72,13 +72,15 @@ CREATE TABLE IF NOT EXISTS news_signals (
 # 위 *_signals(per-signal 분석로그, 스케줄러·백테스트용)와 별개.
 # DisclosureBundle/NewsBundle(전략가가 읽는 출력)을 시계열로 append.
 # PK = 단일 _id(AUTOINCREMENT, 리뷰 반영) · (ticker, collected_at)은 UNIQUE로 병행
-# (새 공시/기사 뜰 때마다 새 행, Strategist는 종목별 최신 행). is_positive = sentiment_score>0.5.
+# (새 공시/기사 뜰 때마다 새 행, Strategist는 종목별 최신 행).
+# 0~1 점수 컬럼은 전부 _score 접미로 통일(importance_score·confidence_score·trust_score 등).
 _TB_DISC_DDL = """CREATE TABLE IF NOT EXISTS tb_disclosure (
   _id INTEGER PRIMARY KEY AUTOINCREMENT,
   ticker TEXT NOT NULL, collected_at TEXT NOT NULL, trade_date TEXT, has_signal INTEGER,
   filing_title TEXT, filing_no TEXT, filed_at TEXT,
-  event_type TEXT, sentiment TEXT, sentiment_score REAL, is_positive INTEGER, reason TEXT,
-  importance REAL, risk_score REAL, confidence REAL,
+  event_type TEXT, sentiment TEXT, sentiment_score REAL,
+  importance_score REAL, risk_score REAL, confidence_score REAL,
+  importance_score_reason TEXT, sentiment_score_reason TEXT, risk_score_reason TEXT,
   hard_block INTEGER, hard_block_reason TEXT, summary TEXT, keywords TEXT,
   UNIQUE (ticker, collected_at)
 );"""
@@ -87,9 +89,11 @@ _TB_NEWS_DDL = """CREATE TABLE IF NOT EXISTS tb_news (
   _id INTEGER PRIMARY KEY AUTOINCREMENT,
   ticker TEXT NOT NULL, collected_at TEXT NOT NULL, trade_date TEXT, has_signal INTEGER,
   news_title TEXT, source TEXT, published_at TEXT, news_count INTEGER,
-  event_type TEXT, disclosure_ref TEXT, sentiment TEXT, sentiment_score REAL, is_positive INTEGER, reason TEXT,
-  importance REAL, peak_importance REAL, risk_score REAL, confidence REAL,
-  source_trust REAL, grade_score REAL,
+  event_type TEXT, disclosure_ref TEXT, sentiment TEXT, sentiment_score REAL,
+  importance_score REAL, peak_importance_score REAL, risk_score REAL, confidence_score REAL,
+  trust_score REAL, grade_score REAL,
+  importance_score_reason TEXT, peak_importance_score_reason TEXT, sentiment_score_reason TEXT,
+  risk_score_reason TEXT, trust_score_reason TEXT,
   hard_block INTEGER, hard_block_reason TEXT,
   top_evidence TEXT, summary TEXT, keywords TEXT, ref TEXT,
   UNIQUE (ticker, collected_at)
@@ -99,8 +103,9 @@ _TB_NEWS_DDL = """CREATE TABLE IF NOT EXISTS tb_news (
 _TB_DISC_COLS = [
     "ticker", "collected_at", "trade_date", "has_signal",
     "filing_title", "filing_no", "filed_at",
-    "event_type", "sentiment", "sentiment_score", "is_positive", "reason",
-    "importance", "risk_score", "confidence",
+    "event_type", "sentiment", "sentiment_score",
+    "importance_score", "risk_score", "confidence_score",
+    "importance_score_reason", "sentiment_score_reason", "risk_score_reason",
     "hard_block", "hard_block_reason", "summary", "keywords",
 ]
 
@@ -108,11 +113,19 @@ _TB_NEWS_COLS = [
     "ticker", "collected_at", "trade_date", "has_signal",
     "news_title", "source", "published_at",
     "news_count",
-    "event_type", "disclosure_ref", "sentiment", "sentiment_score", "is_positive", "reason",
-    "importance", "peak_importance", "risk_score", "confidence",
-    "source_trust", "grade_score",
+    "event_type", "disclosure_ref", "sentiment", "sentiment_score",
+    "importance_score", "peak_importance_score", "risk_score", "confidence_score",
+    "trust_score", "grade_score",
+    "importance_score_reason", "peak_importance_score_reason", "sentiment_score_reason",
+    "risk_score_reason", "trust_score_reason",
     "hard_block", "hard_block_reason", "top_evidence", "summary", "keywords", "ref",
 ]
+
+# 구 컬럼명 → 신 컬럼명(개명 마이그레이션용). is_positive는 매핑 없음(삭제).
+_BUNDLE_RENAME = {
+    "importance": "importance_score", "confidence": "confidence_score",
+    "peak_importance": "peak_importance_score", "source_trust": "trust_score",
+}
 
 _NEWS_COLS = [
     "analyzed_at", "ticker", "news_key", "source", "source_grade",
@@ -151,6 +164,30 @@ def _migrate_bundle_pk(conn: sqlite3.Connection, table: str,
     conn.execute(f"DROP TABLE {table}__old")
 
 
+def _migrate_bundle_rename(conn: sqlite3.Connection, table: str,
+                           create_sql: str, new_cols: list[str]) -> None:
+    """구 컬럼(importance 등)·is_positive가 남은 tb_*를 _score 통일 신 스키마로 재생성.
+
+    데이터는 구→신 개명(_BUNDLE_RENAME)으로 매핑 복사해 보존, is_positive는 버린다.
+    이미 신 스키마(importance_score 존재 & is_positive 없음)면 아무것도 안 한다.
+    """
+    existing = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+    if not existing or "importance_score_reason" in existing:  # 최신 스키마면 skip
+        return
+    conn.execute(f"ALTER TABLE {table} RENAME TO {table}__ren")
+    conn.executescript(create_sql)                       # 신 스키마로 원명 재생성
+    dst, src = [], []
+    for nc in new_cols:                                   # 신 컬럼 ← 대응 구 컬럼
+        old = next((o for o, n in _BUNDLE_RENAME.items() if n == nc and o in existing), None)
+        if old is None and nc in existing:
+            old = nc
+        if old:
+            dst.append(nc)
+            src.append(old)
+    conn.execute(f"INSERT INTO {table} ({', '.join(dst)}) SELECT {', '.join(src)} FROM {table}__ren")
+    conn.execute(f"DROP TABLE {table}__ren")
+
+
 def _migrate(conn: sqlite3.Connection) -> None:
     """기존 DB에 없는 컬럼을 보강(ADD COLUMN). CREATE IF NOT EXISTS로는 안 붙음."""
     def _cols(t: str) -> set:
@@ -171,10 +208,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
     # 번들 스냅샷: 복합PK(ticker,collected_at) → 단일 _id PK 재생성(리뷰 반영)
     _migrate_bundle_pk(conn, "tb_disclosure", _TB_DISC_DDL, _TB_DISC_COLS)
     _migrate_bundle_pk(conn, "tb_news", _TB_NEWS_DDL, _TB_NEWS_COLS)
-    # is_positive(sentiment_score>0.5 불리언 파생) — 기존 DB 보강
-    for t in ("tb_disclosure", "tb_news"):
-        if "is_positive" not in _cols(t):
-            conn.execute(f"ALTER TABLE {t} ADD COLUMN is_positive INTEGER")
+    # 0~1 점수 _score 개명 + is_positive 삭제 — 기존 DB를 신 스키마로 재생성(데이터 매핑 보존)
+    _migrate_bundle_rename(conn, "tb_disclosure", _TB_DISC_DDL, _TB_DISC_COLS)
+    _migrate_bundle_rename(conn, "tb_news", _TB_NEWS_DDL, _TB_NEWS_COLS)
 
 
 def _conn() -> sqlite3.Connection:

@@ -36,19 +36,25 @@ def news_res(et, imp, senti, title, trust=0.9, conf=True, grade="ALLOW"):
 print("[1] 공시 압축 신호 — 필드·개명")
 db_ = DisclosureBundle(ticker="AAPL", trade_date="2026-07-09")
 db_.has_signal = 1
-db_.event_type = "earnings"; db_.importance = 0.82; db_.sentiment_score = 0.76
+db_.event_type = "earnings"; db_.importance_score = 0.82; db_.sentiment_score = 0.76
 db_.risk_score = 0.18; db_.hard_block = 0; db_.summary = "매출·이익 개선 확인"
 s = db_.to_strategist_signal()
 print("     ", json.dumps(s, ensure_ascii=False))
 check("importance→importance_score 개명", "importance_score" in s and "importance" not in s)
 check("importance_score=0.82", s["importance_score"] == 0.82)
-check("핵심 7필드만", set(s) == {"has_signal", "event_type", "importance_score",
-      "sentiment_score", "risk_score", "hard_block", "summary"})
-check("filing_no·reason·confidence 등 미포함", "filing_no" not in s and "confidence" not in s)
+check("핵심 10필드(점수3+근거3+메타)", set(s) == {
+      "has_signal", "event_type",
+      "importance_score", "importance_score_reason",
+      "sentiment_score", "sentiment_score_reason",
+      "risk_score", "risk_score_reason",
+      "hard_block", "summary"})
+check("점수별 근거 3종 포함", {"importance_score_reason", "sentiment_score_reason",
+      "risk_score_reason"} <= set(s))
+check("filing_no·confidence_score 미포함", "filing_no" not in s and "confidence_score" not in s)
 
 print("[2] hard_block 사유가 summary에 포함")
 db2 = DisclosureBundle(ticker="XYZ", trade_date="2026-07-09")
-db2.has_signal = 1; db2.event_type = "delisting_halt"; db2.importance = 0.9
+db2.has_signal = 1; db2.event_type = "delisting_halt"; db2.importance_score = 0.9
 db2.sentiment_score = 0.05; db2.risk_score = 0.9; db2.hard_block = 1
 db2.hard_block_reason = "going concern"; db2.summary = "상폐 위험 공시"
 s2 = db2.to_strategist_signal()
@@ -56,17 +62,19 @@ check("hard_block=True", s2["hard_block"] is True)
 check(f"summary에 차단 사유 포함: {s2['summary']}",
       "going concern" in s2["summary"] and "차단" in s2["summary"])
 
-print("[3] 뉴스 압축 신호 — peak_importance·trust_score 개명")
+print("[3] 뉴스 압축 신호 — peak_importance_score·trust_score 개명")
 nb = build_news_bundle("NVDA", "2026-07-09",
                        news_results=[news_res("earnings", 8, "positive", "beat"),
                                      news_res("guidance_change", 6, "positive", "raise")])
 ns = nb.to_strategist_signal()
 print("     ", json.dumps(ns, ensure_ascii=False))
-check("peak_importance 포함", "peak_importance" in ns)
-check("source_trust→trust_score 개명", "trust_score" in ns and "source_trust" not in ns)
-check("importance_score 개명", "importance_score" in ns)
+check("peak_importance_score 포함", "peak_importance_score" in ns)
+check("trust_score 개명(source_trust 미포함)", "trust_score" in ns and "source_trust" not in ns)
+check("importance_score 개명", "importance_score" in ns and "importance" not in ns)
 check("article_count = 기사 수", ns["article_count"] == 2)
-check("peak ≥ importance (강신호 보존)", ns["peak_importance"] >= ns["importance_score"])
+check("peak ≥ importance (강신호 보존)", ns["peak_importance_score"] >= ns["importance_score"])
+check("점수별 근거 5종 전달 포함", {"importance_score_reason", "peak_importance_score_reason",
+      "sentiment_score_reason", "risk_score_reason", "trust_score_reason"} <= set(ns))
 
 print("[4] 신호 없음 → has_signal=false + hard_block만")
 empty = build_news_bundle("TSLA", "2026-07-09", news_results=[]).to_strategist_signal()
@@ -80,7 +88,7 @@ nb.collected_at = "2026-07-09T10:00:00+00:00"; save_news_bundle(nb)
 ds = latest_disclosure_signal("AAPL")
 nsig = latest_news_signal("NVDA")
 check("latest_disclosure_signal 압축 반환", ds["event_type"] == "earnings" and ds["importance_score"] == 0.82)
-check("latest_news_signal peak 포함", "peak_importance" in nsig)
+check("latest_news_signal peak 포함", "peak_importance_score" in nsig)
 check("없는 종목 → has_signal=False", latest_disclosure_signal("NONE")["has_signal"] is False)
 
 print("\n🎉 전부 통과")

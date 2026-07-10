@@ -10,6 +10,12 @@
   2. 개별 기사들의 방향을 종합해 **전체적으로 호재(bullish)·악재(bearish)·혼조(mixed)** 중 무엇인지 명시합니다.
   3. 첫 문장에 종합 방향을 먼저 밝히면 좋습니다. 예: "Overall bullish. The batch covers an acquisition and an analyst upgrade, ..."
 - **keywords** (영어): 묶음 전체를 대표하는 핵심 키워드 **정확히 5개**.
+- **점수별 근거 5개** (각 **한 문장·영어**): 입력에 주어진 집계 점수값(SCORES)이 왜 그렇게 나왔는지 기사들로 설명합니다.
+  - `importance_reason`: importance_score 근거 (예: "A multi-year supply deal drives high aggregate importance.")
+  - `peak_importance_reason`: peak_importance_score 근거 (가장 센 신뢰 기사 관점. 예: "The confirmed Reuters supply-deal report is the strongest single signal.")
+  - `sentiment_reason`: sentiment_score(방향) 근거 (예: "Confirmed positive reports dominate; no material negatives.")
+  - `risk_reason`: risk_score 근거 (예: "No litigation or regulatory downside mentioned.")
+  - `trust_reason`: trust_score 근거 (매체 신뢰 관점. 예: "Reuters and Bloomberg lead; the low-trust blog carries little weight.")
 
 ## 지켜야 할 것
 

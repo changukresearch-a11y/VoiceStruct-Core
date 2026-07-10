@@ -36,8 +36,8 @@ def analyze(item: NormalizedItem) -> NewsSignal:
     return _agent().run_sync(user_input).output
 
 
-def synthesize_overview(ticker: str, analyzed: list) -> NewsOverview:
-    """분석된 기사들(각 .signal)을 LLM으로 한 개의 배치 종합 요약·키워드로 합친다."""
+def synthesize_overview(bundle, analyzed: list) -> NewsOverview:
+    """분석 기사들 + 집계 점수를 LLM에 주어 배치 종합 요약·키워드·점수별 근거를 만든다."""
     lines = []
     for r in analyzed:
         sig = r.signal
@@ -45,27 +45,39 @@ def synthesize_overview(ticker: str, analyzed: list) -> NewsOverview:
         conf = "confirmed" if getattr(sig, "is_confirmed", False) else "unconfirmed"
         lines.append(
             f"- ({sig.event_type}/{sig.sentiment}/{conf}) {r.item.title} :: {detail}")
-    user_input = f"[{ticker}] {len(analyzed)} articles today:\n" + "\n".join(lines)
+    scores = (f"SCORES(0~1): importance={bundle.importance_score} "
+              f"peak_importance={bundle.peak_importance_score} "
+              f"sentiment={bundle.sentiment_score} risk={bundle.risk_score} "
+              f"trust={bundle.trust_score}")
+    user_input = (f"[{bundle.ticker}] {len(analyzed)} articles today:\n"
+                  + "\n".join(lines) + "\n\n" + scores)
     return _overview_agent().run_sync(user_input).output
 
 
 def enrich_bundle_overview(bundle, news_results: list):
-    """LLM 배치 종합으로 bundle.summary/keywords를 덮어쓴다(대표 1건 → 묶음 전체).
+    """LLM 배치 종합으로 요약·키워드·점수별 근거(_score_reason 5종)를 채운다.
 
-    기사 2건 이상·has_signal일 때만 호출한다(1건이면 대표=전체라 불필요).
-    LLM 실패 시 기존(대표 기사) 요약을 그대로 유지해 견고성을 지킨다.
-    build_news_bundle 바깥에서 돌려 그 순수성을 깨지 않는다(disclosure_ref와 동일 패턴).
+    has_signal이고 분석 기사≥1이면 호출한다(근거는 1건이어도 필요). 요약·키워드
+    override는 2건 이상일 때만(1건이면 대표 요약 유지). LLM 실패 시 기존값을 유지해
+    견고성을 지킨다. build_news_bundle 바깥에서 돌려 그 순수성을 깨지 않는다.
     """
     if not getattr(bundle, "has_signal", 0):
         return bundle
     analyzed = [r for r in (news_results or []) if getattr(r, "signal", None) is not None]
-    if len(analyzed) < 2:                       # 1건이면 대표 요약이 곧 전체
+    if not analyzed:
         return bundle
     try:
-        ov = synthesize_overview(bundle.ticker, analyzed)
-    except Exception:                           # 네트워크·LLM 실패 → 대표 요약 유지
+        ov = synthesize_overview(bundle, analyzed)
+    except Exception:                           # 네트워크·LLM 실패 → 기존값 유지
         return bundle
-    if ov and ov.summary:
+    if not ov:
+        return bundle
+    bundle.importance_score_reason = ov.importance_reason or ""
+    bundle.peak_importance_score_reason = ov.peak_importance_reason or ""
+    bundle.sentiment_score_reason = ov.sentiment_reason or ""
+    bundle.risk_score_reason = ov.risk_reason or ""
+    bundle.trust_score_reason = ov.trust_reason or ""
+    if len(analyzed) >= 2 and ov.summary:       # 묶음 종합 요약은 2건 이상일 때만 override
         bundle.summary = ov.summary
         if ov.keywords:
             bundle.keywords = list(ov.keywords)

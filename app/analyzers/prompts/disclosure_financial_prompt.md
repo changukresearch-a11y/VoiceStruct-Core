@@ -17,8 +17,11 @@
 - keywords: 핵심 키워드 5개(영어; 종목·실적항목·증감률 등).
 - verdict: 검증 결과 한 문장(영어). **맨 앞에 'Bullish'/'Bearish'/'Neutral' 명시** + 근거 요지.
   예: "Bullish — double-digit revenue and profit growth, fundamentals solid."
+- importance_reason: importance 점수 근거 **한 문장**(영어). 예: "Revenue up 14% YoY beating guidance → material."
+- sentiment_reason: sentiment(방향) 점수 근거 **한 문장**(영어). 예: "Broad-based beat with record services margin."
+- risk_reason: risk 점수 근거 **한 문장**(영어). 예: "Guidance cautious on FX headwinds keeps some downside."
 
-★ 출력 언어: **summary·keywords·verdict·reason·evidence_quotes는 모두 영어로** 쓴다
+★ 출력 언어: **summary·keywords·verdict·reason·evidence_quotes·importance_reason·sentiment_reason·risk_reason은 모두 영어로** 쓴다
   (전략가 에이전트가 영어로 읽는다).
 
 확실하지 않으면 sentiment=neutral, certainty_level=Low, trade_permission=WATCH_ONLY,
