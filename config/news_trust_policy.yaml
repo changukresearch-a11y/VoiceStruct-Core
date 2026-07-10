@@ -1,7 +1,8 @@
-# 뉴스 출처 신뢰도 3단계 정책 (V2, WATCH_ONLY 소셜 등급 제거 — 팀 결정 2026-07-03).
+# 뉴스 출처 신뢰도 3단계 정책 (V3, 소셜·미등록=BLOCK / GRAY=2급 언론 한정 — 팀 결정 2026-07-10).
 # 핵심: ALLOW ≠ 매수허용. ALLOW는 '분석 반영 가능'일 뿐,
 # 최종 매수는 시장반응·리스크 필터를 추가로 통과해야 한다.
-# 미등록 도메인(소셜 x/reddit/stocktwits 등 포함)은 코드에서 보수적 기본 GRAY로 분류.
+# 소셜·포럼(x/reddit/stocktwits 등)과 미등록 도메인은 BLOCK — LLM 호출 전 drop(분석 제외).
+# GRAY는 '등록된 2급 언론사'로만 한정한다(더 이상 미등록의 기본값 아님).
 #
 # ── 선정 기준 (등급 근거) ──────────────────────────────────────────
 # 외부 신뢰도 지수(NewsGuard·MBFC 등)를 그대로 쓴 게 아니라, 매체의 역할·유형과
@@ -9,8 +10,8 @@
 #   ALLOW = ① 1차 공식출처(규제기관·거래소: sec/nasdaq/nyse/finra/fda)
 #         + ② 1급 금융언론(편집·팩트체킹·정정보도 책임: reuters/bloomberg/wsj/ap/cnbc/ft/barrons/marketwatch)
 #         + ③ 공식 보도자료 배포사(기업 원문 그대로: businesswire/prnewswire/globenewswire)
-#   GRAY  = 2차 매체·논평·집계 중심(단독 신뢰 부적합) + 소셜/미등록 전부
-#   BLOCK = 유료홍보·수익보장·원출처 없음(편집 책임 없음)
+#   GRAY  = 2차 매체·논평·집계 중심(단독 신뢰 부적합) — 등록된 2급 언론만
+#   BLOCK = 소셜·포럼(x/reddit/stocktwits 등) + 미등록 도메인 + 유료홍보·수익보장·원출처 없음
 # ※ 한계: 업계 통념 기반 큐레이션이라 외부 감사표준엔 미앵커링(후속 과제).
 #   단 grade_score는 단일 관문 아님 — 키워드필터+is_confirmed+source_trust+교차확인 다층 방어.
 # 상세: Document/결과값_필드_레퍼런스.html §7-1
@@ -38,7 +39,7 @@ source_policy:
     - prnewswire.com
     - globenewswire.com
 
-  GRAY:         # 2급 — 자체취재보다 논평·추천·집계 중심 → 단독 매수 금지, 교차확인 시 감점
+  GRAY:         # 등록된 2급 언론사만 — 논평·추천·집계 중심 → 단독 매수 금지, 교차확인 시 감점
     - benzinga.com
     - seekingalpha.com
     - fool.com
@@ -47,7 +48,23 @@ source_policy:
     - thestreet.com
     - tipranks.com
 
-# (WATCH_ONLY 소셜 등급 제거 — 소셜/미등록 도메인은 코드 기본값 GRAY로 처리)
+  BLOCK:        # 소셜·포럼·블로그 플랫폼 — 편집 책임 없음 → 분석 제외(LLM 호출 전 drop)
+    - x.com
+    - twitter.com
+    - reddit.com
+    - stocktwits.com
+    - facebook.com
+    - threads.net
+    - instagram.com
+    - tiktok.com
+    - youtube.com
+    - discord.com
+    - t.me            # 텔레그램
+    - truthsocial.com
+    - quora.com
+    - medium.com      # 개인 블로그 플랫폼
+    - substack.com    # 개인 뉴스레터/블로그
+# ※ 위 목록에 없어도, ALLOW/GRAY에 등록되지 않은 모든 도메인은 코드에서 기본 BLOCK 처리된다.
 
 # 본문/메타에서 아래 조건이면 BLOCK (분석 제외)
 block_conditions:
