@@ -136,7 +136,8 @@ def _process_news(ticker: str, limit: int, run_llm: bool, save: bool,
 
 
 def _save_ticker_bundles(ticker: str, trade_date: str, acc: BundleAccumulator,
-                         do_disclosure: bool, do_news: bool) -> None:
+                         do_disclosure: bool, do_news: bool,
+                         run_llm: bool = False) -> None:
     """누적기의 오늘 결과로 종목당 집계 번들을 만들어 tb_disclosure/tb_news에 append.
 
     do_disclosure/do_news는 이중 주기 반영 — 공시 틱에만 tb_disclosure,
@@ -161,9 +162,13 @@ def _save_ticker_bundles(ticker: str, trade_date: str, acc: BundleAccumulator,
             bundle.hard_block_reason = bundle.hard_block_reason or reason
         save_disclosure_bundle(bundle)
     if do_news:
-        nb = build_news_bundle(ticker, trade_date, news_results=acc.news_for(ticker))
+        news_results = acc.news_for(ticker)
+        nb = build_news_bundle(ticker, trade_date, news_results=news_results)
         if nb.has_signal:                        # 대표 event_type ↔ 오늘 공시 filing_no 매칭
             nb.disclosure_ref = acc.disclosure_ref_for(ticker, nb.event_type)
+            if run_llm:                          # 배치 종합 요약·키워드(대표 1건 → 묶음 전체)
+                from app.analyzers.news_analyzer import enrich_bundle_overview
+                enrich_bundle_overview(nb, news_results)
         save_news_bundle(nb)
 
 
@@ -225,7 +230,8 @@ def run_cycle(limit: int = 5, forms: tuple[str, ...] = DEFAULT_FORMS,
         # --- 번들 스냅샷: 종목당 집계 1행 append (공시 틱=tb_disclosure, 뉴스=tb_news) ---
         if save_bundles:
             _save_ticker_bundles(ticker, trade_date, bundle_acc,
-                                 do_disclosure=process_filings, do_news=run_news)
+                                 do_disclosure=process_filings, do_news=run_news,
+                                 run_llm=run_llm)
 
         time.sleep(polite_delay)  # SEC/RSS 예의 (rate limit)
 

@@ -64,3 +64,16 @@ class NewsSignal(BaseModel):
     verdict: str = Field(
         "", description="검증 결과 한 문장. '호재'/'악재'/'중립' 판단을 명시하고 "
                         "확정/추측 여부와 근거 요지를 덧붙여 결론.")
+
+
+class NewsOverview(BaseModel):
+    """한 종목의 여러 기사를 종합한 배치 요약(전략가 전달용). LLM 합성.
+
+    개별 기사(대표 1건)가 아니라 오늘 수집된 기사 묶음 전체를 대표한다.
+    build_news_bundle 바깥에서 계산해 bundle.summary/keywords를 덮어쓴다(순수성 유지).
+    """
+    summary: str = Field(
+        ..., description="기사 묶음 전체를 3~4문장으로 종합. 포함된 사건 유형들(예: 인수·소송·"
+                         "실적)을 밝히고 종합 방향(bullish/bearish/mixed)을 명시. 영어로.")
+    keywords: list[str] = Field(
+        default_factory=list, description="묶음 전체를 대표하는 핵심 키워드 5개. 영어로.")

@@ -62,6 +62,9 @@ def main() -> None:
         args.ticker, trade_date, disclosure_result=disc)
     n_bundle = build_news_bundle(
         args.ticker, trade_date, news_results=news_results)
+    if run_llm:                                  # 배치 종합 요약·키워드(대표 1건 → 묶음 전체)
+        from app.analyzers.news_analyzer import enrich_bundle_overview
+        enrich_bundle_overview(n_bundle, news_results)
 
     if args.save:
         from app.storage.db import save_disclosure_bundle, save_news_bundle

@@ -166,6 +166,9 @@ def build_bundles(ticker: str, category: str | None, company_name: str | None,
         ticker, trade_date, disclosure_result=disc)
     n_bundle = build_news_bundle(
         ticker, trade_date, news_results=news_results)
+    if run_llm:                                  # 배치 종합 요약·키워드(대표 1건 → 묶음 전체)
+        from app.analyzers.news_analyzer import enrich_bundle_overview
+        enrich_bundle_overview(n_bundle, news_results)
     passed = sum(1 for r in news_results if not r.dropped)
     return d_bundle, n_bundle, len(items), passed
 
